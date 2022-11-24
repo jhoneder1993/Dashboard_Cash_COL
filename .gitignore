@@ -6,3 +6,7 @@
 # Las carpetas
 /data
 /gis
+
+#arhivos
+.csv
+.xlsx
