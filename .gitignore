@@ -4,5 +4,5 @@
 .Ruserdata
 
 # Las carpetas
-data
-gis
+/data
+/gis
