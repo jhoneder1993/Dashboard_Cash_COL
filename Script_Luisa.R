@@ -393,6 +393,7 @@ server <- function(input, output, session) {
   
 }
 
+print("server")
 
 
 
