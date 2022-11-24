@@ -1,5 +1,5 @@
 .Rproj.user
-.Rhistory
+*.Rhistory
 .RData
 .Ruserdata
 
@@ -8,5 +8,5 @@
 /gis
 
 #arhivos
-.csv
-.xlsx
+*.csv
+*.xlsx
