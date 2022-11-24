@@ -33,10 +33,10 @@ data <- read.csv("data/longterm_data.csv", na.strings = c("NA", ""), encoding="l
 
 item_list   <- read.csv("data/item_list.csv", encoding="latin1")                                     # load item list
 
-#country     <- st_read("gis/irq_admbnda_adm0_cso_itos_20190603.shp")              # load shapefile with country border
-#governorate <- st_read("gis/irq_admbnda_adm1_cso_20190603.shp")                   # load shapefile with governorate borders
-#district    <- st_read("gis/irq_admbnda_adm2_cso_20190603.shp")                   # load shapefile with district borders
+country <- st_read("gis/World_admin0_countries_py_WFP_nd.shp") 
+departamento <- st_read("gis/Admin1_UnodcOcha_01012009.shp")                       # load shapefile with depto borders
 
+plot(st_geometry(departamento))
 
 if (grepl("[0-9]{4}-[0-9]{2}-[0-9]{2}", data$mes[1])) {                           # format date column in JPMI dataset as date
   data$mes <- as.Date(data$mes, format = "%Y-%m-%d")
@@ -194,6 +194,11 @@ stock <- stock %>%
          "Días de existencia: Leche"             = leche,
          "Días de existencia: Lomitos de atún en lata en aceite"   = atun)
 
+#################### Join stock and departamento
+
+departamento <- departamento %>% left_join(stock, by = c("admin1Name" = "Departamento"))
+
+names(departamento)
 
 #### 4 REFERENCES ##############################################################
 
