@@ -1,3 +1,0 @@
-# Ignorar las carpetas
-data
-gis
