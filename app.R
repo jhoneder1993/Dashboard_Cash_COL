@@ -197,6 +197,11 @@ group_by(mes, departamento, municipio) %>%
          "Días de existencia: Lomitos de atún en lata en aceite"   = atun)
 
 
+#################### Join stock and departamento
+
+departamento2 <- departamento %>% left_join(stock, by = ("admin2Name" = "Departamento"))
+left
+names(stock)
 #### 4 REFERENCES ##############################################################
 
 max(unique(lubridate::dmy(prices_long$Fecha)))
