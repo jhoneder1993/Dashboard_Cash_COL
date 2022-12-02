@@ -7,7 +7,6 @@
 #    http://shiny.rstudio.com/
 ################################################################################
 rm(list = ls())
-
 #### 1 LOAD PACKAGES ###########################################################
 
 library(dplyr)                                                                    # data wrangling work horse
@@ -37,7 +36,9 @@ item_list   <- read.csv("data/item_list.csv", encoding="latin1")                
 #country     <- st_read("gis/irq_admbnda_adm0_cso_itos_20190603.shp")              # load shapefile with country border
 #governorate <- st_read("gis/irq_admbnda_adm1_cso_20190603.shp")                   # load shapefile with governorate borders
 #district    <- st_read("gis/irq_admbnda_adm2_cso_20190603.shp")                   # load shapefile with district borders
+departamento <- st_read("gis/Admin1_UnodcOcha_01012009.shp")
 
+#plot(st_geometry(departamento))
 
 if (grepl("[0-9]{4}-[0-9]{2}-[0-9]{2}", data$mes[1])) {                           # format date column in JPMI dataset as date
   data$mes <- as.Date(data$mes, format = "%Y-%m-%d")
