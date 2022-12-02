@@ -1,45 +1,3 @@
-
-rm(list = ls())
-
-
-execute_if <- function(.data, .predicate, .language)
-{
-  .predicate <- enquo(.predicate)
-  if (rlang::eval_tidy(.predicate, data = .data))
-  {
-    .language <- enquo(.language)
-    execute_in_pipeline(.data, !!.language)
-  }
-  else
-    .data
-}
-
-execute_in_pipeline <- function(.data, .language)
-{
-  # nice thing is that all !! unquotation for the environment from where we are called is done
-  # by enquo either here or one level up
-  .language <- enquo(.language)
-  # the quosure stores the environment from where it originates
-  pipeline_env <- rlang::get_env(.language)
-  # Something like ". %>% ..." creates a magrittr functional sequence, which can be called
-  # Prepare such a call in our caller's environment
-  
-  magrittr_call <- quo(`%>%`(., !!.language))
-  magrittr_call <- rlang::quo_expr(magrittr_call)
-  #alternative
-  #magrittr_call <- parse_expr(str_c(". %>% ", quo_text(.language)))
-  
-  magrittr_call <- rlang::new_quosure(magrittr_call, env=pipeline_env)
-  # Call magrittr::%>%, creating a functiona sequence
-  fseq <- rlang::eval_tidy(magrittr_call)
-  # Call the sequence with our .data parameter
-  rlang::invoke(fseq, list(.data))
-}
-
-
-
-
-
 # Script del dashboard para JMMI Colombia componente comerciantes
 # You can run the application by clicking
 # the 'Run App' button above.
@@ -80,12 +38,8 @@ list_existencia <- read.csv("data/list_existencia.csv", na.strings = c("NA", "")
 country <- st_read("gis/World_admin0_countries_py_WFP_nd.shp") 
 departamento <- st_read("gis/Admin1_UnodcOcha_01012009.shp")
 
-if (grepl("[0-9]{4}-[0-9]{2}-[0-9]{2}", data$mes[1])) {                           # format date column in JPMI dataset as date
-  data$mes <- as.Date(data$mes, format = "%Y-%m-%d")
-} else if (grepl("[0-9]{2}/[0-9]{2}/[0-9]{4}", data$mes[1])) {
-  data$mes <- as.Date(data$mes, format = "%d/%m/%Y")
-}
-
+# Ajustar a tipo Date
+data$mes <- lubridate::dmy(data$mes)
 
 # data to numeric ---------------------------------------------------------
 
@@ -305,12 +259,9 @@ ui <- bootstrapPage(
              
              tabPanel("Mapa",
                       icon = icon("map"),
-                      
                       div(class="outer",
                           
-                          tags$head(
-                            includeCSS("styles.css")
-                          ),
+                          tags$head(includeCSS("styles.css")),
                           
                           leafletOutput("map", width = "100%", height = "100%"),
                           
