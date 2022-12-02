@@ -362,8 +362,8 @@ ui <- bootstrapPage(
   )
 )
 
-             
-          
+
+
 
 
 #### 7 SERVER ##################################################################
@@ -388,7 +388,7 @@ server <- function(input, output, session) {
     labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$Admin1Name, format(departamento$'`Días de existencia: Arroz`', big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
     pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
                         domain = departamento$'`Días de existencia: Arroz`', na.color = "transparent"
-                        )
+    )
     
     map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
       addMapPane(name = "base", zIndex = 410) %>%
@@ -501,7 +501,7 @@ server <- function(input, output, session) {
                    )
       )
   })
-
+  
   
   
 }
@@ -517,8 +517,7 @@ shinyApp(ui = ui, server = server)
 
 
 
-             
-             
-             
-             
-             
+
+
+
+
