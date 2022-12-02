@@ -39,11 +39,8 @@ item_list   <- read.csv("data/item_list.csv", encoding="latin1")                
 #district    <- st_read("gis/irq_admbnda_adm2_cso_20190603.shp")                   # load shapefile with district borders
 
 
-if (grepl("[0-9]{4}-[0-9]{2}-[0-9]{2}", data$mes[1])) {                           # format date column in JPMI dataset as date
-  data$mes <- as.Date(data$mes, format = "%Y-%m-%d")
-} else if (grepl("[0-9]{2}/[0-9]{2}/[0-9]{4}", data$mes[1])) {
-  data$mes <- as.Date(data$mes, format = "%d/%m/%Y")
-}
+# Ajustar a tipo Date
+data$mes <- lubridate::dmy(data$mes)
 
 
 # data to numeric ---------------------------------------------------------
@@ -295,163 +292,246 @@ ui <- bootstrapPage(
              
              #### 1ra página ################################################
              
-             tabPanel("Dashboard",
-                      icon = icon("tachometer-alt"),
-                      div(class="dashboard",                                                            # set dashboard class from CSS file
+             tabPanel("Grafica de Precios",
+                      icon = icon("chart-line"),                                                                  # Nombre del primer panel
+                      chooseSliderSkin(skin = "Flat", color = NULL),
+                      sidebarLayout(
+                        
+                        sidebarPanel(
+                          tags$i(h6("Nota: Los precios reportados solamente son indicativos.", style="color:#045a8d")),        # Texto y color del texto
                           
-                          tags$head(includeCSS("styles.css")),                                          # load CSS stylesheet
                           
-                          leafletOutput("map_home", width = "100%", height = "100%"),                   # display background map
                           
-                          absolutePanel(                                                                # define introduction box
-                            id = "home", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
-                            top = "10", left = "10", right = "auto", bottom = "auto", width = "350", height = 950,
-                            h5("Contexto"),
-                            p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
-                              de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
-                              para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:20px"),
-                            p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
-                              para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
-                              de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
-                              style="text-align:justify;margin-bottom:20px"),
-                            p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
-                              lanzó la Iniciativa Conjunta de Monitoreo del Mercado de Colombia (JMMI- COL) desde marzo del 2020, entrevistando tanto a
-                              consumidores como comerciantes para entender la situación actual del mercado, su capacidad de satisfacer las necesidades mínimas
-                              y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:20px"),
-                            h5("Metodología"),
-                            p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
-                              comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
-                              De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
-                              registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            h5("Limitaciones"),
-                            p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
-                              ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
-                              generalizables a las poblaciones de interés.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            
-                            hr(),
-                            
-                            tags$head(includeCSS("styles.css")),
-                            
-                            leafletOutput("map", width = "100%", height = "100%"),
-                            
-                            absolutePanel(
-                              id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "370", right = "auto", bottom = "auto",
-                              width = 330, height = "auto",
-                              
-                              
-                              pickerInput("map_indicator_select",
-                                          label = "Nivel de desagregación:",
-                                          choices = "Departamento",
-                                          selected = "Departamento",
-                                          multiple = TRUE
-                              ),
-                              hr(),
-                              
-                              # Cuando se selecciona Departamento
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
-                                               radioGroupButtons("map_by_departamento_item",
-                                                                 label = "Agrupar por:",   
-                                                                 choices = c("Item", "Departamento"),
-                                                                 selected = "Item",
-                                                                 justified = TRUE
-                                               )
-                              ),
-                              
-                              
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Departamento' & input.map_by_departamento_item == 'Departamento'",
-                                               pickerInput("select_bydepartamento_departamento",
-                                                           label = "Departamento(s):",
-                                                           choices = unique(map_location_list$Departamento),
-                                                           options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                           selected = c("Bogota, D.C."),
-                                                           multiple = TRUE
-                                               )
-                              ),
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
-                                               pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
-                                                           label = "Grupo de productos:",
-                                                           choices = lapply(split(item_list$Item, item_list$Group), as.list),
-                                                           options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                           selected = full_list$Item[1],
-                                                           multiple = TRUE
-                                               )
-                              ),
-                              
-                              sliderTextInput("map_date_select",
-                                              "Month:",
-                                              force_edges = TRUE,
-                                              choices = dates,
-                                              selected = dates_max,
-                                              animate = TRUE
-                              )                                                                              # close sliderTextInput
-                              
-                            ),                                                                                 # close absolutePanel
-                            
-                            absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
-                                          width = "550", height = "20",
-                                          tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
-                            ))))))
+                          pickerInput("plot_aggregation",                                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
+                                      label = "Nivel de agregación: ",
+                                      choices = c("Departamento", "Municipio"),
+                                      selected = "Departamento",
+                                      multiple = FALSE
+                          ),
+                          
+                          hr(),                                                                                                # Linea separadora
+                          # Cuando se selecciona Departamento
+                          conditionalPanel(condition = "input.plot_aggregation == 'Departamento'",
+                                           radioGroupButtons("plot_by_departamento_item",
+                                                             label = "Agrupar por:",
+                                                             choices = c("Item", "Departamento"),
+                                                             selected = "Item",
+                                                             justified = TRUE
+                                           )
+                          ),
+                          
+                          conditionalPanel(condition = "input.plot_aggregation == 'Departamento' & input.plot_by_departamento_item == 'Departamento'",
+                                           pickerInput("select_bydepartamento_departamento",
+                                                       label = "Departamento(s):",
+                                                       choices = unique(plot_location_list$Departamento),
+                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                       selected = c("Bogota, D.C."),
+                                                       multiple = TRUE
+                                           )
+                          ),
+                          
+                          # Cuando se selecciona Municipio
+                          conditionalPanel(condition = "input.plot_aggregation == 'Municipio'",
+                                           radioGroupButtons("plot_by_municipio_item",
+                                                             label = "Agrupar por:",
+                                                             choices = c("Item", "Municipio"),
+                                                             selected = "Item",
+                                                             justified = TRUE
+                                           )
+                          ),
+                          
+                          conditionalPanel(condition = "input.plot_aggregation == 'Municipio' & input.plot_by_municipio_item == 'Municipio'",
+                                           pickerInput("select_bymunicipio_municipio",
+                                                       label = "Municipio(s):",
+                                                       choices = lapply(split(plot_location_list$Municipio, plot_location_list$Departamento), as.list),
+                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                       selected = c("Bogota, D.C."),
+                                                       multiple = TRUE
+                                           )
+                          ),
+                          
+                          conditionalPanel(condition = "input.plot_aggregation == 'Departamento' | input.plot_aggregation == 'Municipio'",
+                                           pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
+                                                       label = "Grupo de productos: ",
+                                                       choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                       selected = full_list$Item[1],
+                                                       multiple = TRUE
+                                           )
+                          ),
+                          hr(),
+                          
+                          conditionalPanel(condition = "input.plot_aggregation == 'Departamento' | input.plot_aggregation == 'Municipio'",
+                                           sliderTextInput("select_date",                                                # set date slider
+                                                           "Meses:",
+                                                           force_edges = TRUE,
+                                                           choices = dates,
+                                                           selected = c(dates_min, dates_max)
+                                           )
+                          ),
+                          
+                          hr(),
+                          
+                          h6("Algo de carreta si se quiere o se puede eliminar esto"),
+                          
+                          absolutePanel(id = "dropdown", bottom = 20, left = 20, width = 200,                            # define blue info button
+                                        fixed=TRUE, draggable = FALSE, height = "auto",
+                                        dropdown(
+                                          h4("Se requiere boton informativo"),
+                                          column(
+                                            HTML("Una tabla puede ir aqui???"),
+                                            width = 6),
+                                          column(p(h6("textooooooo")),
+                                                 p(h6("más texto")),
+                                                 p(h6("super textoooooo")),
+                                                 p(h6("More details on the SMEB can be found here:",
+                                                      tags$a(href="https://www.impact-repository.org/toolkit/file-storage-and-management/",
+                                                             "Prueba de link"), ".")),
+                                                 width = 5),
+                                          width = "650px",
+                                          tooltip = tooltipOptions(title = "Queremos utilizar un boton informativo?"),
+                                          size = "xs",
+                                          up = TRUE,
+                                          style = "jelly", icon = icon("info"),
+                                          animate = animateOptions(
+                                            enter = "fadeInLeftBig",
+                                            exit  = "fadeOutLeft",
+                                            duration = 0.5)
+                                        )
+                          ),
+                          
+                          width = 3                                                                    # Cambiar el ancho del recuadro
+                          
+                        ),
+                        
+                        mainPanel(                                                                      # Cuando va sidebarLayout debe ir mainPanel
+                          br(),
+                          tags$i(textOutput("plot_text"), style = "color: red"),                        # display error message displayed if there is no data available
+                          highchartOutput("graph", width = "100%", height = "600px"),                   # display large chart
+                          width = 8                                                                     # set width of main panel (out of 12, as per bootstrap logic)
+                        )))
+             ))
 
 
 
 #### 7 SERVER ##################################################################
 
-server <- function(input, output, session) 
+server <- function(input, output, session){
   
-{
-  
-  ### Primera página ###
-  
-  map_indicator_select <- reactive({
-    if (input$map_indicator_select == "Prices") {input$map_by_departamento_item} else {input$select_bydepartamento_departamento}
+  #########   2da ventana ######################################################
+  # Funciones para imprimir la informacion
+  # imprimir departamento si se tiene solo Item
+  plot_departamento_select <- reactive({
+    if (input$plot_by_departamento_item == "Item") {input$select_byitem_departamento} else {input$select_bydepartamento_departamento}
+  })
+  # imprimir municipio si se tiene solo Item
+  plot_municipio_select <- reactive({
+    if (input$plot_by_municipio_item == "Item") {input$select_byitem_municipio} else {input$select_bymunicipio_municipio}
+  })
+  # imprimir municipio o departamento cuando se escogio algun Item
+  plot_item_select <- reactive({
+    if ((input$plot_aggregation == 'Municipio' & input$plot_by_municipio_item == 'Item') | (input$plot_aggregation == 'Departamento' & input$plot_by_departamento_item == 'Item')) {input$select_item}
   })
   
-  output$map_text <- renderText({""})
-  
-  output$map <- renderLeaflet({
-    
-    prices_map <- prices_long #%>% filter(Fecha==dates_max)
-    departamento1 <- left_join(departamento, prices_map, by=c("admin1RefN", "Departamento"))
-    
-    labels <- sprintf("<strong>%s</strong><br/>%s IQD (%s)", departamento$admin1Name, format(departamento$'Costo total', big.mark=","), format(departamento$date)) %>% lapply(htmltools::HTML)
-    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                        domain = departamento$'Costo total', na.color = "transparent"
-    )
-    
-    leafletProxy("map") %>%
-      clearControls %>%
-      clearGroup("Departamento") %>%
-      execute_if(input$map_indicator_select == "Item",
-                 addPolygons(data = departamento1, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento1[[map_indicator_select()]]),
-                             stroke = TRUE, color = "#58585A", weight = 0.4, opacity = 1,
-                             highlight = highlightOptions(
-                               weight = 5,
-                               color = "#666666",
-                               fillOpacity = 0.75,
-                               bringToFront = TRUE
-                             ),
-                             label = labels,
-                             labelOptions = labelOptions(
-                               style = list("font-weight" = "normal", padding = "3px 8px"),
-                               textsize = "15px",
-                               direction = "auto"),
-                             options = leafletOptions(pane = "polygons")
-                 )
-                 
+  # La informacion que se va a mostrar
+  plot_datasetInput <- reactive({prices_long %>%
+      filter(
+        is.null(plot_item_select()) | Item %in% plot_item_select()
       ) %>%
-      execute_if(input$map_indicator_select == "Prices",
-                 addLegend("bottomright", pal = pal, values = district[[map_indicator_select()]],
-                           title = "Price:",
-                           labFormat = labelFormat(prefix = "IQD "),
-                           opacity = 1
-                 )
+      execute_if(input$plot_by_municipio_item == 'Item' | input$plot_by_departamento_item == 'Item',
+                 filter(
+                   lubridate::dmy(Fecha) >= input$select_date[1] & lubridate::dmy(Fecha) <= input$select_date[2]
+                 )) %>% 
+      execute_if(input$plot_aggregation == 'Departamento',    filter(is.null(plot_departamento_select()) | Departamento %in% plot_departamento_select())) %>% 
+      execute_if(input$plot_aggregation == 'Municipio', select(-Departamento)) %>%
+      execute_if(input$plot_aggregation == 'Municipio', group_by(lubridate::dmy(Fecha),Municipio)) %>%
+      execute_if(input$plot_aggregation == 'Municipio', summarise_all(median, na.rm = TRUE)) %>%
+      execute_if(input$plot_aggregation == 'Municipio', filter(is.null(plot_municipio_select()) | Municipio %in% plot_municipio_select())) %>%
+      filter(!is.na(Price))
+    
+  })
+  
+  output$plot_text <- renderText({
+    if (nrow(plot_datasetInput()) == 0) {
+      "There is no data for this selection. Change the time frame or select another indicator/location."} else {"vamos bien perrito"}
+  })
+  
+  output$graph <- renderHighchart({
+    
+    if ((input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") | (input$plot_aggregation == "Municipio" & input$plot_by_municipio_item == "Item")) {
+      graph <- hchart(plot_datasetInput(), "point", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Item))
+      
+    } else if (input$plot_aggregation == "Departamento"){
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Departamento))
+      
+    } else {
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Municipio))
+    }
+    graph <- graph %>%
+      hc_xAxis(title = "") %>%
+      hc_colors(cols) %>%
+      hc_exporting(
+        enabled = TRUE,
+        filename = paste0("IRQ-JPMI-linegraph_export-", Sys.Date()),
+        buttons = list(contextButton = list(menuItems = list("downloadPNG", "downloadPDF", "downloadCSV"))),
+        sourceWidth = 1000,
+        sourceHeight = 600
       )
   })
+  
+  ## Dataexplorer 
+  
+  table_datasetInput1 <- reactive({
+    full %>% filter(
+      lubridate::dmy(Fecha) >= input$table_data[1] & lubridate::dmy(Fecha) <= input$table_data[2]
+    ) %>%
+      select(Fecha, Departamento, input$table_show_vars) %>% 
+      group_by(Fecha, Departamento) %>% 
+      summarise_all(median, na.rm = TRUE) # Si se quiere ver la mediana o promedio realizar el cambio de la funcion
+  })
+  
+  
+  table_datasetInput2 <- reactive({
+    full %>% filter(
+      #is.null(input$table_municipio) | Municipio %in% input$table_municipio,  # Tener cuidado, que es lo que se quiere filtrar
+      lubridate::dmy(Fecha) >= input$table_data[1] & lubridate::dmy(Fecha) <= input$table_data[2]
+    ) %>%
+      select("Fecha", "Departamento", "Municipio", input$table_show_vars_municipio)
+  })
+  
+  
+  table_datasetInput <- reactive({
+    if (input$table_aggregation == "Departamento") {table_datasetInput1()} else {table_datasetInput2()}
+  })
+  
+  output$table <- renderDT({
+    
+    DT::datatable(
+      table_datasetInput(),
+      extensions = c('ColReorder'),
+      options = list(autoWidth = TRUE, dom = 't', paging = FALSE, colReorder= TRUE, fixedHeader = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns = 3)),
+      rownames = FALSE,
+      style = 'bootstrap', class = 'table-condensed table-hover table-striped'
+    ) %>%
+      formatRound(
+        # Empezar a hacer el formatRound a partir de la 3ra o 4ta columna
+        if (input$table_aggregation == "Departamento") {3:ncol(table_datasetInput())} else {4:ncol(table_datasetInput())},
+        digits = 0,
+        interval = 3,
+        mark = ",",
+        dec.mark = getOption("OutDec")
+      ) %>%
+      formatStyle(names(table_datasetInput()), "white-space"="nowrap")
+  })
+  
+  observe({
+    input$table_reset
+    #updatePickerInput(session, "table_show_vars", selected = plot_location_list$Departamento)
+    #updatePickerInput(session, "table_show_vars_municipio", selected = c("Fecha", "Departamento", "Municipio"),)
+    #updatePickerInput(session, "table_show_vars_municipio", selected = names(data),)
+    #updateSliderTextInput(session, "table_data", selected = c(dates_min, dates_max))
+  }) 
+  
   
 }
 
