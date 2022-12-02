@@ -1,3 +1,45 @@
+
+rm(list = ls())
+
+
+execute_if <- function(.data, .predicate, .language)
+{
+  .predicate <- enquo(.predicate)
+  if (rlang::eval_tidy(.predicate, data = .data))
+  {
+    .language <- enquo(.language)
+    execute_in_pipeline(.data, !!.language)
+  }
+  else
+    .data
+}
+
+execute_in_pipeline <- function(.data, .language)
+{
+  # nice thing is that all !! unquotation for the environment from where we are called is done
+  # by enquo either here or one level up
+  .language <- enquo(.language)
+  # the quosure stores the environment from where it originates
+  pipeline_env <- rlang::get_env(.language)
+  # Something like ". %>% ..." creates a magrittr functional sequence, which can be called
+  # Prepare such a call in our caller's environment
+  
+  magrittr_call <- quo(`%>%`(., !!.language))
+  magrittr_call <- rlang::quo_expr(magrittr_call)
+  #alternative
+  #magrittr_call <- parse_expr(str_c(". %>% ", quo_text(.language)))
+  
+  magrittr_call <- rlang::new_quosure(magrittr_call, env=pipeline_env)
+  # Call magrittr::%>%, creating a functiona sequence
+  fseq <- rlang::eval_tidy(magrittr_call)
+  # Call the sequence with our .data parameter
+  rlang::invoke(fseq, list(.data))
+}
+
+
+
+
+
 # Script del dashboard para JMMI Colombia componente comerciantes
 # You can run the application by clicking
 # the 'Run App' button above.
@@ -33,10 +75,10 @@ data <- read.csv("data/longterm_data.csv", na.strings = c("NA", ""), encoding="l
 
 item_list   <- read.csv("data/item_list.csv", encoding="latin1")                                     # load item list
 
-#country     <- st_read("gis/irq_admbnda_adm0_cso_itos_20190603.shp")              # load shapefile with country border
-#governorate <- st_read("gis/irq_admbnda_adm1_cso_20190603.shp")                   # load shapefile with governorate borders
-#district    <- st_read("gis/irq_admbnda_adm2_cso_20190603.shp")                   # load shapefile with district borders
+list_existencia <- read.csv("data/list_existencia.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";") 
 
+country <- st_read("gis/World_admin0_countries_py_WFP_nd.shp") 
+departamento <- st_read("gis/Admin1_UnodcOcha_01012009.shp")
 
 if (grepl("[0-9]{4}-[0-9]{2}-[0-9]{2}", data$mes[1])) {                           # format date column in JPMI dataset as date
   data$mes <- as.Date(data$mes, format = "%Y-%m-%d")
@@ -148,7 +190,7 @@ indicators2 <- indicators %>%
          '% de comerciantes que reportaron desafíos por: Restricciones en las fronteras' = desafios_3,
          '% de comerciantes que reportaron desafíos por: Inseguridad en la ruta de abastecimiento' =  desafios_4,
          '% de comerciantes que reportaron desafíos por: Malas condiciones físicas de las carreteras' = desafios_5,
-         '% de comerciantes que reportaron desafíos por: Los proveedores detuvieron sus produccioness' = desafios_6,
+         '% de comerciantes que reportaron desafíos por: Los proveedores detuvieron sus producciones' = desafios_6,
          '% de comerciantes que reportaron desafíos por: Los proveedores no tienen esos productos' = desafios_7,
          '% de comerciantes que reportaron desafíos por: El tiempo entre el pedido y la entrega es más largo' = desafios_8,
          '% de comerciantes que reportaron desafíos por: Los proveedores no están produciendo estos productos' = desafios_9,
@@ -166,6 +208,7 @@ full <- left_join(prices, indicators2, by = c("Fecha", "Departamento", "Municipi
 
 
 #### * 3.3 Stock ###############################################################
+list_existencia <- read.csv("data/list_existencia.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";") 
 stock <- data %>%
   select(mes, departamento, municipio, starts_with("dias_exisnc"))
 
@@ -195,11 +238,15 @@ stock <- stock %>%
          "Días de existencia: Lomitos de atún en lata en aceite"   = atun)
 
 
+full2 <- left_join(stock, indicators2, by = c("Fecha", "Departamento", "Municipio"))
+
+#full <- left_join(prices, indicators2, by = c("Fecha", "Departamento", "Municipio"))
+
 #### 4 REFERENCES ##############################################################
 
 max(unique(lubridate::dmy(prices_long$Fecha)))
 
-
+dates_stock <- sort(unique(lubridate::dmy(stock$Fecha)))
 
 dates <- sort(unique(lubridate::dmy(prices_long$Fecha)))                                          # define list with date range in data
 dates_min  <- min(lubridate::dmy(prices_long$Fecha))                              # set minimum date to be displayed
@@ -217,7 +264,7 @@ plot_location_list <- prices_long %>%                                           
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
   filter(!duplicated(Departamento))                                               # remove duplicates
 
-indicator_list <- names(indicators) %>%
+indicator_list <- names(indicators2) %>%
   str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
 
 cols      <- c("rgb(238,88,89)",   "rgb(88,88,90)",    "rgb(165,201,161)",        # define color palette for plot lines
@@ -248,151 +295,216 @@ one_year_from_current_date <- lubridate::dmy(prices_country_home$Fecha) %>% max(
 
 prices_country_home <- prices_country_home %>% filter(Fecha > one_year_from_current_date)
 
-#prices_changes <- prices_country_long %>%                                         # calculate bi-monthly/yearly changes of item prices
-#  filter(Fecha == dates_max | Fecha == dates_max2 | Fecha == "2020-11-1") %>%        # use "dates_max_1y" for yearly change
-#  group_by(Item) %>%
-#  mutate(change  = percent(Price/lag(Price, order_by=Fecha)-1, accuracy = 1),
-#         change2 = percent(Price/lag(Price, n = 2, order_by=Fecha)-1, accuracy = 1)) %>%
-#  mutate(change  = ifelse(!grepl('^\\-', change) & change != "0%" & !is.na(change), paste0("+", change, HTML(" &#9650;")), change),
-#         change  = ifelse(grepl('^\\-', change), paste0(change, HTML(" &#9660;")), change),
-#         change  = ifelse(change == "0%", paste0(change, HTML(" &#9654;")), change),
-#         change2 = ifelse(!grepl('^\\-', change2) & change2 != "0%" & !is.na(change2), paste0("+", change2, HTML(" &#9650;")), change2),
-#         change2 = ifelse(grepl('^\\-', change2), paste0(change2, HTML(" &#9660;")), change2),
-#         change2 = ifelse(change2 == "0%", paste0(change2, HTML(" &#9654;")), change2)) %>%
-#  filter(Fecha == dates_max,
-#         !is.na(Price)) %>%
-#  select(-Fecha) %>%
-#  mutate(Price   = format(Price, big.mark=","),
-#         change2 = replace_na(change2, "NA")) %>%
-#  rename("Precio"= Price,
-#         "Cambio mensual" = change,
-#         "Cambio anual"       = change2)
-#
-#prices_changes_items <- prices_changes %>%
-#  filter(!(str_detect(Item, "^SMEB") | Item == "US dollars (1 USD)"))
-#
-#prices_changes_meb <- prices_changes %>%
-#  filter(str_detect(Item, "^SMEB") | str_detect(Item, "^US dollars")) %>%
-#  arrange(Item)
-#
-#data_latest <- data %>%                                                                                   # latest dataset for download on dashboard page
-#  filter(date == dates_max) %>%
-#  select(-(106:ncol(data)), -starts_with("dias_exisnc"))
-
 
 #### 6 UI ######################################################################
 ui <- bootstrapPage(
   navbarPage("JMMI COLOMBIA",                                                                                     # Nombre del DASHBOARD o del panel navegador
              theme = shinytheme("simplex"),                                                                       # Tema del navbarpage
              
+             #### * 3 Mapa ###############################################################
              
-             #### 1ra página ################################################
-             
-             tabPanel("Dashboard",
-                      icon = icon("tachometer-alt"),
-                      div(class="dashboard",                                                            # set dashboard class from CSS file
+             tabPanel("Mapa",
+                      icon = icon("map"),
+                      
+                      div(class="outer",
                           
-                          tags$head(includeCSS("styles.css")),                                          # load CSS stylesheet
+                          tags$head(
+                            includeCSS("styles.css")
+                          ),
                           
-                          leafletOutput("map_home", width = "100%", height = "100%"),                   # display background map
+                          leafletOutput("map", width = "100%", height = "100%"),
                           
-                          absolutePanel(                                                                # define introduction box
-                            id = "home", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
-                            top = "10", left = "10", right = "auto", bottom = "auto", width = "350", height = 950,
-                            h5("Contexto"),
-                            p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
-                              de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
-                              para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:20px"),
-                            p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
-                              para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
-                              de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
-                              style="text-align:justify;margin-bottom:20px"),
-                            p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
-                              lanzó la Iniciativa Conjunta de Monitoreo del Mercado de Colombia (JMMI- COL) desde marzo del 2020, entrevistando tanto a
-                              consumidores como comerciantes para entender la situación actual del mercado, su capacidad de satisfacer las necesidades mínimas
-                              y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:20px"),
-                            h5("Metodología"),
-                            p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
-                              comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
-                              De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
-                              registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:20px"),
+                          absolutePanel(
+                            id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "130", left = "12", right = "auto", bottom = "auto",
+                            width = 330, height = "auto",
                             
-                            h5("Limitaciones"),
-                            p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
-                              ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
-                              generalizables a las poblaciones de interés.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            
-                            hr(),
-                            
-                            leafletOutput("map", width = "100%", height = "100%"),
-                            
-                            absolutePanel(
-                              id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "370", right = "auto", bottom = "auto",
-                              width = 330, height = "auto",
-                              
-                              pickerInput("map_indicator_select",
-                                          label = "Precios:",   
-                                          choices = "Prices",
-                                          selected = "Prices",
-                                          multiple = FALSE
-                              ),
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Prices'",
-                                               pickerInput("map_item_select",
-                                                           label = "Item:",   
-                                                           choices = lapply(split(item_list$Item, item_list$Group), as.list),
-                                                           selected = "SMEB common basket",
-                                                           options = list(`actions-box` = TRUE),
-                                                           multiple = FALSE
-                                               )
-                              ),
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Availability and Challenges'",
-                                               pickerInput("map_addindicator_select",
-                                                           label = HTML("Availability and Challenges:<br><i>(% of assessed traders)</i>"),   
-                                                           choices = sort(indicator_list),
-                                                           selected = "% of traders reporting harmful supply route change in past 30 days",
-                                                           options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                           multiple = FALSE
-                                               )
-                              ),
-                              
-                              sliderTextInput("map_date_select",
-                                              "Month:",
-                                              force_edges = TRUE,
-                                              choices = dates,
-                                              selected = dates_max,
-                                              animate = TRUE
-                              )                                                                              # close sliderTextInput
-                              
-                            ),                                                                                 # close absolutePanel
-                            
-                            absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
-                                          width = "550", height = "20",
-                                          tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
+                            pickerInput(inputId =  "mapa_indicadores",
+                                        label = "Indicadores:",
+                                        choices = c("Existencias", "Desafíos de reabastecimiento"),
+                                        selected = "Existencias",
+                                        multiple = FALSE
                             ),
+                            conditionalPanel(condition = "input.mapa_indicadores == 'Existencias'",
+                                             pickerInput(inputId = "map_item_select",
+                                                         label = HTML("Existencias:<br><i>(días de existencia)</i>"),
+                                                         choices = sort(list_existencia$Item),
+                                                         selected = "`Días de existencia: Arroz`",
+                                                         options = list(`actions-box` = TRUE),
+                                                         multiple = FALSE
+                                             )
+                                             
+                            ),
+                            conditionalPanel(condition = "input.mapa_indicadores == 'Desafíos de reabastecimiento'",
+                                             pickerInput(inputId =  "map_addindicator_select",
+                                                         label = HTML("Desafíos de reabastecimiento:<br><i>(% de comerciantes que reportaron)</i>"),
+                                                         choices = sort(indicator_list),
+                                                         selected = "% de comerciantes que reportaron enfrentar desafíos en los últimos 30 días",
+                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                         multiple = FALSE
+                                             )
+                            ),
+                            sliderTextInput(inputId =  "mapa_fecha_seleccionada",
+                                            "Meses:",
+                                            force_edges = TRUE,
+                                            choices = dates,
+                                            selected = dates_max,
+                                            animate = TRUE)                                                                              # close sliderTextInput
                             
-                            
-                            
-                            
-                            br()
+                          ),   
+                          absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
+                                        width = "550", height = "20",
+                                        tags$i(h4(textOutput("mapa_texto"), style = "color: red; background-color: white;"))
+                                        
                           )
+                          
                       )
-                      
-                      
              )
   )
 )
+
+             
+          
+
 
 #### 7 SERVER ##################################################################
 
 server <- function(input, output, session) {
   # Agregar las funciones del server
+  
+  
+  #### 3 Mapa ######################################################################
+  mapa_indicadores <- reactive({
+    if (input$mapa_indicadores == "Existencias") {input$map_item_select} else {input$map_addindicator_select}
+    
+  })
+  
+  output$map_text <- renderText({""})
+  
+  output$map <- renderLeaflet({
+    
+    stock_mapa <- stock %>% filter(dates_stock == "2022-08-01")
+    departamento <- left_join(departamento, stock_mapa, by =c("admin1Name" = "Departamento"))
+    
+    labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$Admin1Name, format(departamento$'`Días de existencia: Arroz`', big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                        domain = departamento$'`Días de existencia: Arroz`', na.color = "transparent"
+                        )
+    
+    map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
+      addMapPane(name = "base", zIndex = 410) %>%
+      addMapPane(name = "polygons", zIndex = 420) %>%
+      addMapPane(name = "label", zIndex = 430) %>%
+      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$'`Días de existencia: Arroz`'),
+                  stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
+                  highlight = highlightOptions(
+                    weight = 5,
+                    color = "#666666",
+                    fillOpacity = 0.75,
+                    bringToFront = TRUE
+                  ),
+                  label = labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "normal", padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto"),
+                  options = leafletOptions(pane = "polygons")
+      )%>%
+      addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+      addLegend("bottomright", pal = pal, values = departamento$'`Días de existencia: Arroz`',
+                title = "Stock:",
+                labFormat = labelFormat(prefix = "Indicador"),
+                opacity = 1
+      ) %>%
+      setMapWidgetStyle(style = list(background = "transparent")) %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
+                       options = c(providerTileOptions(opacity = 0.6),
+                                   leafletOptions(pane = "base"))) %>%
+      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
+                       options = c(providerTileOptions(opacity = 1),
+                                   leafletOptions(pane = "label"))) %>%
+      addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
+  })
+  
+  observe({
+    
+    stock_mapa <- stock %>% filter(lubridate::dmy(Fecha) <= "2022-08-01")
+    departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
+    indicators_map <- indicators2 %>% filter(lubridate::dmy(Fecha) <= "2022-08-01")
+    departamento <- left_join(departamento, indicators2, by = c("admin1Name" = "Departamento"))
+    
+    output$mapa_texto <- renderText({
+      if (all(is.na(departamento[[mapa_indicadores()]])) == TRUE) {
+        "No hay datos para esta selección. Por favor seleccions otro mes o indicador."} else {NULL}
+    })
+    if (all(is.na(departamento[[mapa_indicadores()]])) == TRUE) {
+      return(NULL)
+    }
+    if (input$mapa_indicadores == "Existencias") {
+      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha.x, "%b %Y")) %>% lapply(htmltools::HTML)
+    } else {
+      labels <- sprintf("<strong>%s</strong><br/>%s&#37; de comerciantes que reportaron (%s)", departamento$admin1name, departamento[[mapa_indicadores()]], format(departamento$Fecha.x, "%b %Y")) %>% lapply(htmltools::HTML)
+    }
+    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                        domain = departamento[[mapa_indicadores()]], na.color = "transparent")
+    pal2 <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                         domain = range(0,100), na.color = "transparent")
+    
+    leafletProxy("map") %>%
+      clearControls %>%
+      clearGroup("Departamento") %>%
+      execute_if(input$mapa_indicadores == "Existencias",
+                 addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
+                             stroke = TRUE, color = "#58585A", weight = 0.4, opacity = 1,
+                             highlight = highlightOptions(
+                               weight = 5,
+                               color = "#666666",
+                               fillOpacity = o.75,
+                               bringToFront = TRUE
+                             ),
+                             label = labels,
+                             labelOptions = labelOptions(
+                               style = list("font-weight" = "normal", padding = "3px 8px"),
+                               textsize = "15px",
+                               direction = "auto"),
+                             options = leafletOptions(pane = "polygons")
+                 )
+      )%>%
+      execute_if(input$mapa_indicadores == "Desafíos de reabastecimiento",
+                 addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal2(departamento[[mapa_indicadores()]]),
+                             stroke = TRUE, color = "#58585A", weight = 0.4, opacity = 1,
+                             highlight = highlightOptions(
+                               weight = 5,
+                               color = "#666666",
+                               fillOpacity = 0.75,
+                               bringToFront = TRUE
+                             ),
+                             label = labels, 
+                             labelOptions = labelOptions(
+                               style = list("font-weight" = "normal", padding = "3px 8px"),
+                               textsize = "15px",
+                               direction = "auto",
+                               options = leafletOptions(pane = "polygons")
+                             )
+                 )%>%
+                   execute_if(input$mapa_indicadores == "Existencias",
+                              addLegend("bottomright", pal = pal, values = departamento [[mapa_indicadores()]],
+                                        title = "Existencias:",
+                                        labFormat = labelFormat(prefix = "Stock"),
+                                        opacity = 1)
+                   )%>%
+                   execute_if(input$mapa_indicadores == "Desafíos de reabastecimiento",
+                              addLegend("bottomright", pal = pal2, values = range(0,100),
+                                        title = "% de comerciantes que reportaron:",
+                                        labFormat = labelFormat(suffix = "%"),
+                                        opacity = 1
+                              )
+                   )
+      )
+  })
 
   
+  
 }
-
 
 
 
