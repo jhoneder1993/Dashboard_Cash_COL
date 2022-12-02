@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 ################################################################################
 rm(list = ls())
+
 #### 1 LOAD PACKAGES ###########################################################
 
 library(dplyr)                                                                    # data wrangling work horse
@@ -215,7 +216,13 @@ plot_location_list <- prices_long %>%                                           
   ungroup() %>%
   select(Departamento, Municipio) %>%                                             # extract governorate and district columns
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
-  filter(!duplicated(Departamento))                                               # remove duplicates
+  filter(!duplicated(Departamento))  # remove duplicates
+
+map_location_list <- prices_long %>%                                           # define location list (which is later used as choice filter options)
+  ungroup() %>%
+  select(Departamento, Municipio, Fecha) %>%                                             # extract governorate and district columns
+  arrange(Departamento, Municipio) %>%                                            # list alphabetically
+  filter(!duplicated(Departamento))  # remove duplicates
 
 indicator_list <- names(indicators) %>%
   str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
@@ -325,36 +332,53 @@ ui <- bootstrapPage(
                             
                             hr(),
                             
+                            tags$head(includeCSS("styles.css")),
+                            
                             leafletOutput("map", width = "100%", height = "100%"),
                             
                             absolutePanel(
                               id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "370", right = "auto", bottom = "auto",
                               width = 330, height = "auto",
                               
-                              pickerInput("map_indicator_select",
-                                          label = "Precios:",   
-                                          choices = "Prices",
-                                          selected = "Prices",
-                                          multiple = FALSE
+                             
+                               pickerInput("map_indicator_select",
+                                          label = "Nivel de desagregación:",
+                                          choices = "Departamento",
+                                          selected = "Departamento",
+                                          multiple = TRUE
                               ),
+                              hr(),
                               
-                              conditionalPanel(condition = "input.map_indicator_select == 'Prices'",
-                                               pickerInput("map_item_select",
-                                                           label = "Item:",   
-                                                           choices = lapply(split(item_list$Item, item_list$Group), as.list),
-                                                           selected = "SMEB common basket",
-                                                           options = list(`actions-box` = TRUE),
-                                                           multiple = FALSE
+                              # Cuando se selecciona Departamento
+                              
+                              conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
+                                               radioGroupButtons("map_by_departamento_item",
+                                                           label = "Agrupar por:",   
+                                                           choices = c("Item", "Departamento"),
+                                                           selected = "Item",
+                                                           justified = TRUE
                                                )
                               ),
                               
-                              conditionalPanel(condition = "input.map_indicator_select == 'Availability and Challenges'",
-                                               pickerInput("map_addindicator_select",
-                                                           label = HTML("Availability and Challenges:<br><i>(% of assessed traders)</i>"),   
-                                                           choices = sort(indicator_list),
-                                                           selected = "% of traders reporting harmful supply route change in past 30 days",
+                              
+                              
+                              conditionalPanel(condition = "input.map_indicator_select == 'Departamento' & input.map_by_departamento_item == 'Departamento'",
+                                               pickerInput("select_bydepartamento_departamento",
+                                                           label = "Departamento(s):",
+                                                           choices = unique(map_location_list$Departamento),
                                                            options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                           multiple = FALSE
+                                                           selected = c("Bogota, D.C."),
+                                                           multiple = TRUE
+                                               )
+                              ),
+                              
+                              conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
+                                               pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
+                                                           label = "Grupo de productos:",
+                                                           choices = lapply(split(item_list$Item, item_list$Group), as.list),
+                                                           options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                           selected = full_list$Item[1],
+                                                           multiple = TRUE
                                                )
                               ),
                               
@@ -371,25 +395,63 @@ ui <- bootstrapPage(
                             absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
                                           width = "550", height = "20",
                                           tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
-                            ),
+                            ))))))
                             
-                            
-                            
-                            
-                            br()
-                          )
-                      )
-                      
-                      
-             )
-  )
-)
+             
 
 #### 7 SERVER ##################################################################
 
-server <- function(input, output, session) {
-  # Agregar las funciones del server
+server <- function(input, output, session) 
   
+  {
+  
+  ### Primera página ###
+  
+  map_indicator_select <- reactive({
+    if (input$map_indicator_select == "Prices") {input$map_by_departamento_item} else {input$select_bydepartamento_departamento}
+  })
+  
+  output$map_text <- renderText({""})
+  
+  output$map <- renderLeaflet({
+    
+    prices_map <- prices_long #%>% filter(Fecha==dates_max)
+    departamento1 <- left_join(departamento, prices_map, by=c("admin1RefN", "Departamento"))
+    
+    labels <- sprintf("<strong>%s</strong><br/>%s IQD (%s)", departamento$admin1Name, format(departamento$'Costo total', big.mark=","), format(departamento$date)) %>% lapply(htmltools::HTML)
+    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                        domain = departamento$'Costo total', na.color = "transparent"
+    )
+    
+    leafletProxy("map") %>%
+      clearControls %>%
+      clearGroup("Departamento") %>%
+      execute_if(input$map_indicator_select == "Item",
+                 addPolygons(data = departamento1, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento1[[map_indicator_select()]]),
+                             stroke = TRUE, color = "#58585A", weight = 0.4, opacity = 1,
+                             highlight = highlightOptions(
+                               weight = 5,
+                               color = "#666666",
+                               fillOpacity = 0.75,
+                               bringToFront = TRUE
+                             ),
+                             label = labels,
+                             labelOptions = labelOptions(
+                               style = list("font-weight" = "normal", padding = "3px 8px"),
+                               textsize = "15px",
+                               direction = "auto"),
+                             options = leafletOptions(pane = "polygons")
+                 )
+                 
+      ) %>%
+      execute_if(input$map_indicator_select == "Prices",
+                 addLegend("bottomright", pal = pal, values = district[[map_indicator_select()]],
+                           title = "Price:",
+                           labFormat = labelFormat(prefix = "IQD "),
+                           opacity = 1
+                 )
+      )
+  })
   
 }
 
@@ -398,10 +460,6 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
-
-
-
 
 
 
