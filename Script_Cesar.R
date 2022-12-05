@@ -38,10 +38,29 @@ item_list   <- read.csv("data/item_list.csv", encoding="latin1")                
 #governorate <- st_read("gis/irq_admbnda_adm1_cso_20190603.shp")                   # load shapefile with governorate borders
 #district    <- st_read("gis/irq_admbnda_adm2_cso_20190603.shp")                   # load shapefile with district borders
 
-
+class(data$mes)
 # Ajustar a tipo Date
 data$mes <- lubridate::dmy(data$mes)
 
+unique(data$departamento)
+
+data <- data %>% mutate(departamento = case_when(departamento=="Bogota, D.C."~"Bogotá, D.C.", 
+                                                 departamento =="Atlantico"~"Atlántico",
+                                                 departamento=="Bolivar"~"Bolívar",
+                                                 departamento=="Nariño"~"Nariño",
+                                                 departamento=="Arauca"~"Arauca",
+                                                 departamento=="La Guajira"~"La Guajira",
+                                                 departamento=="Norte de Santander"~"Norte de Santander",
+                                                 departamento=="Antioquia"~"Antioquia",
+                                                 departamento=="Cundinamarca"~"Cundinamarca",
+                                                 departamento=="Valle del Cauca"~"Valle del Cauca",
+                                                 departamento=="Magdalena"~"Magdalena",
+                                                 departamento=="Santander"~"Santander",
+                                                 departamento=="Cesar"~"Cesar",
+                                                 departamento=="Putumayo"~"Putumayo",
+                                                 departamento=="Boyacá"~"Boyacá",
+                                                 departamento=="Cauca"~"Cauca",
+                                                 departamento=="Casanare"~"Casanare"))
 
 # data to numeric ---------------------------------------------------------
 
@@ -195,14 +214,14 @@ stock <- stock %>%
 
 #### 4 REFERENCES ##############################################################
 
-max(unique(lubridate::dmy(prices_long$Fecha)))
+max(unique(prices_long$Fecha))
 
 
 
-dates <- sort(unique(lubridate::dmy(prices_long$Fecha)))                                          # define list with date range in data
-dates_min  <- min(lubridate::dmy(prices_long$Fecha))                              # set minimum date to be displayed
-dates_max  <- max(lubridate::dmy(prices_long$Fecha))                              # maximum date in data
-dates_max2 <- sort(unique(lubridate::dmy(prices_long$Fecha)), decreasing=T)[2]    # second-latest date
+dates <- sort(unique(prices_long$Fecha))                                          # define list with date range in data
+dates_min  <- min(prices_long$Fecha)                              # set minimum date to be displayed
+dates_max  <- max(prices_long$Fecha)                              # maximum date in data
+dates_max2 <- sort(unique(prices_long$Fecha), decreasing=T)[2]    # second-latest date
 
 dates_max_1y <- as.POSIXlt(dates_max)                                             # most recent month minus 1 year
 dates_max_1y$year <- dates_max_1y$year-1
@@ -243,12 +262,12 @@ prices_country <- prices %>%                                                    
 prices_country_long <- gather(prices_country, Item, Price, 2:ncol(prices_country))# transform country-level price data to long format
 
 prices_country_home <- prices_country %>%                                         # filter out SMEB data from country level price data
-  filter(lubridate::dmy(Fecha) >= dates_min) %>%
+  filter((Fecha) >= dates_min) %>%
   select(Fecha, `Lista de productos alimentarios`, `Lista de productos no alimentarios`, 
          `Lista de productos compilados`) %>%
   gather(Item, Price, 'Lista de productos alimentarios':'Lista de productos compilados')                                    # transform SMEB data to long format so highcharter can read dataframe
 
-one_year_from_current_date <- lubridate::dmy(prices_country_home$Fecha) %>% max() - 366
+one_year_from_current_date <- (prices_country_home$Fecha) %>% max() - 366
 
 prices_country_home <- prices_country_home %>% filter(Fecha > one_year_from_current_date)
 
@@ -440,11 +459,14 @@ server <- function(input, output, session){
       ) %>%
       execute_if(input$plot_by_municipio_item == 'Item' | input$plot_by_departamento_item == 'Item',
                  filter(
-                   lubridate::dmy(Fecha) >= input$select_date[1] & lubridate::dmy(Fecha) <= input$select_date[2]
+                   Fecha >= input$select_date[1] & Fecha <= input$select_date[2]
                  )) %>% 
-      execute_if(input$plot_aggregation == 'Departamento',    filter(is.null(plot_departamento_select()) | Departamento %in% plot_departamento_select())) %>% 
+      execute_if(input$plot_aggregation == 'Departamento', select(-Municipio)) %>%
+      execute_if(input$plot_aggregation == 'Departamento', group_by(Fecha,Departamento, Item)) %>%
+      execute_if(input$plot_aggregation == 'Departamento', summarise_all(median, na.rm = TRUE)) %>%
+      execute_if(input$plot_aggregation == 'Departamento', filter(is.null(plot_departamento_select()) | Departamento %in% plot_departamento_select())) %>% 
       execute_if(input$plot_aggregation == 'Municipio', select(-Departamento)) %>%
-      execute_if(input$plot_aggregation == 'Municipio', group_by(lubridate::dmy(Fecha),Municipio)) %>%
+      execute_if(input$plot_aggregation == 'Municipio', group_by(Fecha,Municipio)) %>%
       execute_if(input$plot_aggregation == 'Municipio', summarise_all(median, na.rm = TRUE)) %>%
       execute_if(input$plot_aggregation == 'Municipio', filter(is.null(plot_municipio_select()) | Municipio %in% plot_municipio_select())) %>%
       filter(!is.na(Price))
@@ -459,13 +481,13 @@ server <- function(input, output, session){
   output$graph <- renderHighchart({
     
     if ((input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") | (input$plot_aggregation == "Municipio" & input$plot_by_municipio_item == "Item")) {
-      graph <- hchart(plot_datasetInput(), "point", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Item))
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(Fecha)), y = Price, group = Item))
       
     } else if (input$plot_aggregation == "Departamento"){
-      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Departamento))
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(Fecha)), y = Price, group = Departamento))
       
     } else {
-      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Municipio))
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(Fecha)), y = Price, group = Municipio))
     }
     graph <- graph %>%
       hc_xAxis(title = "") %>%
@@ -483,7 +505,7 @@ server <- function(input, output, session){
   
   table_datasetInput1 <- reactive({
     full %>% filter(
-      lubridate::dmy(Fecha) >= input$table_data[1] & lubridate::dmy(Fecha) <= input$table_data[2]
+      Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
     ) %>%
       select(Fecha, Departamento, input$table_show_vars) %>% 
       group_by(Fecha, Departamento) %>% 
@@ -494,7 +516,7 @@ server <- function(input, output, session){
   table_datasetInput2 <- reactive({
     full %>% filter(
       #is.null(input$table_municipio) | Municipio %in% input$table_municipio,  # Tener cuidado, que es lo que se quiere filtrar
-      lubridate::dmy(Fecha) >= input$table_data[1] & lubridate::dmy(Fecha) <= input$table_data[2]
+      Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
     ) %>%
       select("Fecha", "Departamento", "Municipio", input$table_show_vars_municipio)
   })
