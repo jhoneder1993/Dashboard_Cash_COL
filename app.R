@@ -29,22 +29,16 @@ source("source/execute_in_pipeline.R", encoding = "UTF-8")
 
 #### 2 LOAD DATA ###############################################################
 
-data <- read.csv("data/longterm_data.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";")       # load JPMI dataset
+data <- read.csv("data/longterm_data.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";")   # load JPMI dataset
 
 item_list   <- read.csv("data/item_list.csv", encoding="latin1")                                     # load item list
 
-#country     <- st_read("gis/irq_admbnda_adm0_cso_itos_20190603.shp")              # load shapefile with country border
-#governorate <- st_read("gis/irq_admbnda_adm1_cso_20190603.shp")                   # load shapefile with governorate borders
-#district    <- st_read("gis/irq_admbnda_adm2_cso_20190603.shp")                   # load shapefile with district borders
+# Cargar shps
 departamento <- st_read("gis/Admin1_UnodcOcha_01012009.shp")
+country     <- st_read("gis/World_admin0_countries_py_WFP_nd.shp")              # load shapefile with country border
 
-#plot(st_geometry(departamento))
-
-if (grepl("[0-9]{4}-[0-9]{2}-[0-9]{2}", data$mes[1])) {                           # format date column in JPMI dataset as date
-  data$mes <- as.Date(data$mes, format = "%Y-%m-%d")
-} else if (grepl("[0-9]{2}/[0-9]{2}/[0-9]{4}", data$mes[1])) {
-  data$mes <- as.Date(data$mes, format = "%d/%m/%Y")
-}
+# Ajustar a tipo Date
+data$mes <- lubridate::dmy(data$mes)
 
 
 # data to numeric ---------------------------------------------------------
@@ -63,7 +57,7 @@ numerico <- c("precio_aceite", "precio_arroz", "precio_atun", "precio_cloro",
               "dias_exisnc_pasta", "dias_exisnc_platano", "dias_exisnc_pollo",
               "dias_exisnc_tabapocas", "dias_exisnc_toallas_higienicas",
               "dias_exisnc_tomate", "dias_exisnc_yuca")   
- 
+
 for (i in numerico) {
   data[i] <- as.numeric(data[[i]])
 }
@@ -162,7 +156,7 @@ indicators2 <- indicators %>%
          '% de comerciantes que reportaron desafíos por: No hay suficiente capacidad de almacenamiento' = desafios_15,
          '% de comerciantes que reportaron desafíos por: Los agentes comerciales ya no visitan los comercios de la zona' = desafios_16,
          '% de comerciantes que reportaron desafíos por: Mala relación con el proveedor' = desafios_17
-)
+  )
 
 full <- left_join(prices, indicators2, by = c("Fecha", "Departamento", "Municipio"))
 
@@ -172,7 +166,7 @@ stock <- data %>%
   select(mes, departamento, municipio, starts_with("dias_exisnc"))
 
 stock <- stock %>% 
-group_by(mes, departamento, municipio) %>% 
+  group_by(mes, departamento, municipio) %>% 
   summarise_all(median, na.rm = TRUE) %>%
   select(mes, departamento, municipio, starts_with("dias_exisnc")) %>%          # calculate departamento medians
   group_by(mes, departamento, municipio) %>% 
@@ -199,14 +193,14 @@ group_by(mes, departamento, municipio) %>%
 
 #### 4 REFERENCES ##############################################################
 
-max(unique(lubridate::dmy(prices_long$Fecha)))
-  
+max(unique(prices_long$Fecha))
 
 
-dates <- sort(unique(lubridate::dmy(prices_long$Fecha)))                                          # define list with date range in data
-dates_min  <- min(lubridate::dmy(prices_long$Fecha))                              # set minimum date to be displayed
-dates_max  <- max(lubridate::dmy(prices_long$Fecha))                              # maximum date in data
-dates_max2 <- sort(unique(lubridate::dmy(prices_long$Fecha)), decreasing=T)[2]    # second-latest date
+
+dates <- sort(unique(prices_long$Fecha))                                          # define list with date range in data
+dates_min  <- min(prices_long$Fecha)                                              # set minimum date to be displayed
+dates_max  <- max(prices_long$Fecha)                                              # maximum date in data
+dates_max2 <- sort(unique(prices_long$Fecha), decreasing=T)[2]                    # second-latest date
 
 dates_max_1y <- as.POSIXlt(dates_max)                                             # most recent month minus 1 year
 dates_max_1y$year <- dates_max_1y$year-1
@@ -217,7 +211,13 @@ plot_location_list <- prices_long %>%                                           
   ungroup() %>%
   select(Departamento, Municipio) %>%                                             # extract governorate and district columns
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
-  filter(!duplicated(Departamento))                                               # remove duplicates
+  filter(!duplicated(Departamento))  # remove duplicates
+
+map_location_list <- prices_long %>%                                           # define location list (which is later used as choice filter options)
+  ungroup() %>%
+  select(Departamento, Municipio, Fecha) %>%                                             # extract governorate and district columns
+  arrange(Departamento, Municipio) %>%                                            # list alphabetically
+  filter(!duplicated(Departamento))  # remove duplicates
 
 indicator_list <- names(indicators) %>%
   str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
@@ -241,45 +241,14 @@ prices_country <- prices %>%                                                    
 prices_country_long <- gather(prices_country, Item, Price, 2:ncol(prices_country))# transform country-level price data to long format
 
 prices_country_home <- prices_country %>%                                         # filter out SMEB data from country level price data
-  filter(lubridate::dmy(Fecha) >= dates_min) %>%
+  filter(Fecha >= dates_min) %>%
   select(Fecha, `Lista de productos alimentarios`, `Lista de productos no alimentarios`, 
          `Lista de productos compilados`) %>%
   gather(Item, Price, 'Lista de productos alimentarios':'Lista de productos compilados')                                    # transform SMEB data to long format so highcharter can read dataframe
 
-one_year_from_current_date <- lubridate::dmy(prices_country_home$Fecha) %>% max() - 366
+one_year_from_current_date <- prices_country_home$Fecha %>% max() - 366
 
 prices_country_home <- prices_country_home %>% filter(Fecha > one_year_from_current_date)
-
-#prices_changes <- prices_country_long %>%                                         # calculate bi-monthly/yearly changes of item prices
-#  filter(Fecha == dates_max | Fecha == dates_max2 | Fecha == "2020-11-1") %>%        # use "dates_max_1y" for yearly change
-#  group_by(Item) %>%
-#  mutate(change  = percent(Price/lag(Price, order_by=Fecha)-1, accuracy = 1),
-#         change2 = percent(Price/lag(Price, n = 2, order_by=Fecha)-1, accuracy = 1)) %>%
-#  mutate(change  = ifelse(!grepl('^\\-', change) & change != "0%" & !is.na(change), paste0("+", change, HTML(" &#9650;")), change),
-#         change  = ifelse(grepl('^\\-', change), paste0(change, HTML(" &#9660;")), change),
-#         change  = ifelse(change == "0%", paste0(change, HTML(" &#9654;")), change),
-#         change2 = ifelse(!grepl('^\\-', change2) & change2 != "0%" & !is.na(change2), paste0("+", change2, HTML(" &#9650;")), change2),
-#         change2 = ifelse(grepl('^\\-', change2), paste0(change2, HTML(" &#9660;")), change2),
-#         change2 = ifelse(change2 == "0%", paste0(change2, HTML(" &#9654;")), change2)) %>%
-#  filter(Fecha == dates_max,
-#         !is.na(Price)) %>%
-#  select(-Fecha) %>%
-#  mutate(Price   = format(Price, big.mark=","),
-#         change2 = replace_na(change2, "NA")) %>%
-#  rename("Precio"= Price,
-#         "Cambio mensual" = change,
-#         "Cambio anual"       = change2)
-#
-#prices_changes_items <- prices_changes %>%
-#  filter(!(str_detect(Item, "^SMEB") | Item == "US dollars (1 USD)"))
-#
-#prices_changes_meb <- prices_changes %>%
-#  filter(str_detect(Item, "^SMEB") | str_detect(Item, "^US dollars")) %>%
-#  arrange(Item)
-#
-#data_latest <- data %>%                                                                                   # latest dataset for download on dashboard page
-#  filter(date == dates_max) %>%
-#  select(-(106:ncol(data)), -starts_with("dias_exisnc"))
 
 
 #### 6 UI ######################################################################
@@ -288,7 +257,7 @@ ui <- bootstrapPage(
              theme = shinytheme("simplex"),                                                                       # Tema del navbarpage
              
              
-             #### 1ra página ################################################
+             #### 1ra página  DASHBOARD ########################################
              
              tabPanel("Dashboard",
                       icon = icon("tachometer-alt"),
@@ -296,97 +265,102 @@ ui <- bootstrapPage(
                           
                           tags$head(includeCSS("styles.css")),                                          # load CSS stylesheet
                           
-                          leafletOutput("map_home", width = "100%", height = "100%"),                   # display background map
+                          leafletOutput("map", width = "100%", height = "100%"),                        # Cargar el mapa
                           
                           absolutePanel(                                                                # define introduction box
                             id = "home", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
-                            top = "10", left = "10", right = "auto", bottom = "auto", width = "350", height = 950,
+                            top = "10", left = "10", right = "auto", bottom = "auto", width = "370", height = "600",
+                            style = "overflow-y: scroll;",
+                            
                             h5("Contexto"),
+                            
                             p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
                               de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
                               para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:20px"),
+                            
                             p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
                               para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
                               de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
                               style="text-align:justify;margin-bottom:20px"),
+                            
                             p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
                               lanzó la Iniciativa Conjunta de Monitoreo del Mercado de Colombia (JMMI- COL) desde marzo del 2020, entrevistando tanto a
                               consumidores como comerciantes para entender la situación actual del mercado, su capacidad de satisfacer las necesidades mínimas
                               y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:20px"),
+                            
+                            hr(),
+                            
                             h5("Metodología"),
+                            
                             p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
                               comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
                               De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
                               registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:20px"),
                             
+                            hr(),
+                            
                             h5("Limitaciones"),
+                            
                             p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
                               ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
                               generalizables a las poblaciones de interés.", style="text-align:justify;margin-bottom:20px"),
+                          ),
+                          
+                          ##########################
+                          absolutePanel(
+                            id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "380", right = "auto", bottom = "auto",
+                            width = 330, height = "auto",
                             
+                            
+                            pickerInput("map_indicator_select",
+                                        label = "Agrupar por:",
+                                        choices = c("Item", "Departamento"),
+                                        selected = "Item",
+                                        multiple = FALSE
+                            ),
+                            hr(),
+                            
+                            
+                            conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
+                                             pickerInput("select_bydepartamento_departamento",
+                                                         label = "Departamento(s):",
+                                                         choices = unique(map_location_list$Departamento),
+                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                         selected = c("Bogota, D.C."),
+                                                         multiple = TRUE
+                                             )
+                            ),
+                            
+                            conditionalPanel(condition = "input.map_indicator_select == 'Item'",
+                                             pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
+                                                         label = "Grupo de productos:",
+                                                         choices = lapply(split(item_list$Item, item_list$Group), as.list),
+                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                         selected = full_list$Item[1],
+                                                         multiple = FALSE
+                                             )
+                            ),
                             
                             hr(),
                             
-                            leafletOutput("map", width = "100%", height = "100%"),
+                            sliderTextInput("map_date_select",
+                                            "Month:",
+                                            force_edges = TRUE,
+                                            choices = dates,
+                                            selected = dates_max,
+                                            animate = TRUE
+                            )                                                                              # close sliderTextInput
                             
-                            absolutePanel(
-                              id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "370", right = "auto", bottom = "auto",
-                              width = 330, height = "auto",
-                              
-                              pickerInput("map_indicator_select",
-                                          label = "Precios:",   
-                                          choices = "Prices",
-                                          selected = "Prices",
-                                          multiple = FALSE
-                              ),
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Prices'",
-                                               pickerInput("map_item_select",
-                                                           label = "Item:",   
-                                                           choices = lapply(split(item_list$Item, item_list$Group), as.list),
-                                                           selected = "SMEB common basket",
-                                                           options = list(`actions-box` = TRUE),
-                                                           multiple = FALSE
-                                               )
-                              ),
-                              
-                              conditionalPanel(condition = "input.map_indicator_select == 'Availability and Challenges'",
-                                               pickerInput("map_addindicator_select",
-                                                           label = HTML("Availability and Challenges:<br><i>(% of assessed traders)</i>"),   
-                                                           choices = sort(indicator_list),
-                                                           selected = "% of traders reporting harmful supply route change in past 30 days",
-                                                           options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                           multiple = FALSE
-                                               )
-                              ),
-                              
-                              sliderTextInput("map_date_select",
-                                              "Month:",
-                                              force_edges = TRUE,
-                                              choices = dates,
-                                              selected = dates_max,
-                                              animate = TRUE
-                              )                                                                              # close sliderTextInput
-                              
-                            ),                                                                                 # close absolutePanel
-                            
-                            absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
-                                          width = "550", height = "20",
-                                          tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
-                            ),
-                            
-                            
-                            
-                            
-                            br()
+                          ),                                                                                 # close absolutePanel
+                          
+                          absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 00, bottom = 0,
+                                        width = "550", height = "20",
+                                        tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
                           )
-                      )
-             
-                          
-                            ),
+                      )),
                           
              
-             #### Price plot ################################################
+             #### 2da página  Grafica de Precios################################
              
              tabPanel("Grafica de Precios",
                       icon = icon("chart-line"),                                                                  # Nombre del primer panel
@@ -569,6 +543,89 @@ ui <- bootstrapPage(
 #### 7 SERVER ##################################################################
 
 server <- function(input, output, session) {
+  
+  #########   1ra ventana DASHBOARD ############################################
+  
+  output$map_text <- renderText({""})
+  
+  output$map <- renderLeaflet({
+    
+    #prices_map <- prices_long %>% filter(Fecha == dates_max)
+    
+    if (input$map_indicator_select == "Item") {
+      prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
+        summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
+    } else {
+      prices_map <- prices_long %>% select(-Municipio, -Item) %>% filter(Fecha == input$map_date_select, Departamento %in% input$select_bydepartamento_departamento) %>% 
+        group_by(Fecha, Departamento) %>% summarise_all(median, na.rm = TRUE) 
+      
+    }
+    
+    #prices_map <- prices_long %>% select(-Municipio, -Item) %>% filter(Fecha == "2020-11-01", Departamento == "Antioquia") %>% 
+    #  group_by(Fecha, Departamento) %>% summarise_all(median, na.rm = TRUE) 
+    
+    
+    #prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
+    #  summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
+    
+    departamento <- left_join(departamento, prices_map, by = c("admin1Name" = "Departamento"))
+    
+    output$map_text <- renderText({
+      if (all(is.na(departamento[["Price"]])) == TRUE) {
+        "There is no data for this selection. Select another month or indicator."} else {NULL}
+    })
+    
+    if (all(is.na(departamento[["Price"]])) == TRUE) {
+      return(NULL)
+    } 
+    
+    labels <- sprintf("<strong>%s</strong><br/>%s COP (%s)", departamento$admin1Name, format(departamento$'Price', big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                        domain = departamento$'Price', na.color = "transparent"
+    )
+    
+    # Coordenadas
+    bounds <- departamento %>% 
+      st_bbox() %>% 
+      as.character()
+    
+    map <- leaflet(options = leafletOptions(attributionControl=FALSE, )) %>%
+      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>% 
+      addMapPane(name = "base", zIndex = 410) %>% 
+      addMapPane(name = "polygons", zIndex = 420) %>% 
+      addMapPane(name = "label", zIndex = 430) %>%
+      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$'Price'),
+                  stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
+                  highlight = highlightOptions(
+                    weight = 5,
+                    color = "#666666",
+                    fillOpacity = 0.75,
+                    bringToFront = TRUE
+                  ),
+                  label = labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "normal", padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto"),
+                  options = leafletOptions(pane = "polygons")
+      ) %>% 
+      addPolygons(data = country, group = "País", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+      addLegend("bottomright", pal = pal, values = departamento$'Price',
+                title = "Precio:",
+                labFormat = labelFormat(prefix = "COP "),
+                opacity = 1
+      )%>%
+      setMapWidgetStyle(style = list(background = "transparent")) %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
+                       options = c(providerTileOptions(opacity = 0.6),
+                                   leafletOptions(pane = "base"))) %>%
+      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
+                       options = c(providerTileOptions(opacity = 1),
+                                   leafletOptions(pane = "label"))) %>%
+      addLayersControl(overlayGroups = c("Labels", "País", "Departamento", "Base map"))
+    
+    
+  })
   
   #########   2da ventana ######################################################
   # Funciones para imprimir la informacion
