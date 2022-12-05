@@ -481,7 +481,7 @@ ui <- bootstrapPage(
                           width = 8                                                                     # set width of main panel (out of 12, as per bootstrap logic)
                         ))),
              
-             # Nuevo tab Panel del Explorador de Datos##################################################################
+             # Nuevo tab Panel del Explorador de Datos #########################
              tabPanel("Data Explorer", 
                       icon = icon("table"),
                       
@@ -688,22 +688,24 @@ server <- function(input, output, session) {
       )
   })
   
+  ## 4ta ventana Dataexplorer ################################################## 
+  
   ## Dataexplorer 
   
   table_datasetInput1 <- reactive({
     full %>% filter(
-      lubridate::dmy(Fecha) >= input$table_data[1] & lubridate::dmy(Fecha) <= input$table_data[2]
+      Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
     ) %>%
       select(Fecha, Departamento, input$table_show_vars) %>% 
       group_by(Fecha, Departamento) %>% 
       summarise_all(median, na.rm = TRUE) # Si se quiere ver la mediana o promedio realizar el cambio de la funcion
-    })
+  })
   
-
+  
   table_datasetInput2 <- reactive({
     full %>% filter(
       #is.null(input$table_municipio) | Municipio %in% input$table_municipio,  # Tener cuidado, que es lo que se quiere filtrar
-      lubridate::dmy(Fecha) >= input$table_data[1] & lubridate::dmy(Fecha) <= input$table_data[2]
+      Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
     ) %>%
       select("Fecha", "Departamento", "Municipio", input$table_show_vars_municipio)
   })
