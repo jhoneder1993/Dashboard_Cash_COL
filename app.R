@@ -484,59 +484,58 @@ ui <- bootstrapPage(
              # Nuevo tab Panel del Explorador de Datos #########################
              tabPanel("Data Explorer", 
                       icon = icon("table"),
+                      tags$head(includeCSS("styles.css")), 
                       
-                      sidebarLayout(
-                        sidebarPanel(
-                          
-                          radioGroupButtons("table_aggregation",                                                                   # pickerInput lista y radioGroupButtons opciones a lo largo
-                                            label = "Nivel de agregación: ",
-                                            choices = c("Departamento", "Municipio"),
-                                            selected = "Departamento",
-                                            justified = TRUE
-                          ),
-                          
-                          #Cuando se selecciona Departamento
-                          conditionalPanel(condition = "input.table_aggregation == 'Departamento'",
-                                           pickerInput("table_show_vars",
-                                                       label = "Productos:",
-                                                       choices = lapply(split(full_list$Item, full_list$Group), as.list),
-                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                       selected = c("Alimentos", "No alimentos"),
-                                                       multiple = TRUE
-                                           )
-                          ),
-                          
-                          #Cuando se selecciona municipio
-                          conditionalPanel(condition = "input.table_aggregation == 'Municipio'",
-                                           pickerInput("table_show_vars_municipio",
-                                                       label = "Productos:",
-                                                       choices = lapply(split(full_list$Item, full_list$Group), as.list),
-                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                       selected = c("Alimentos", "No alimentos"),
-                                                       multiple = TRUE
-                                           )
-                          ),
-                          
-                        #Meses/Rondas
-                                         sliderTextInput("table_data",
-                                                         "Rondas:",
-                                                         force_edges = TRUE,
-                                                         choices = dates,
-                                                         selected = c(dates_min, dates_max))
-                          
+                      absolutePanel(                                                                # define introduction box
+                        id = "control_table", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
+                        top = "50", left = "10", right = "auto", bottom = "auto", width = "370", height = "300",
+                        
+                        radioGroupButtons("table_aggregation",                                                                   # pickerInput lista y radioGroupButtons opciones a lo largo
+                                          label = "Nivel de agregación: ",
+                                          choices = c("Departamento", "Municipio"),
+                                          selected = "Departamento",
+                                          justified = TRUE
                         ),
                         
+                        #Cuando se selecciona Departamento
+                        conditionalPanel(condition = "input.table_aggregation == 'Departamento'",
+                                         pickerInput("table_show_vars",
+                                                     label = "Productos:",
+                                                     choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                     options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                     selected = c("Alimentos", "No alimentos"),
+                                                     multiple = TRUE
+                                         )
+                        ),
                         
+                        #Cuando se selecciona municipio
+                        conditionalPanel(condition = "input.table_aggregation == 'Municipio'",
+                                         pickerInput("table_show_vars_municipio",
+                                                     label = "Productos:",
+                                                     choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                     options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                     selected = c("Alimentos", "No alimentos"),
+                                                     multiple = TRUE
+                                         )
+                        ),
                         
+                        #Meses/Rondas
+                        sliderTextInput("table_data",
+                                        "Rondas:",
+                                        force_edges = TRUE,
+                                        choices = dates,
+                                        selected = c(dates_min, dates_max))
                         
-                        mainPanel(
-                          
-                          DT::dataTableOutput("table", width = "100%", height = "100%"),
-                          width = 9
-                        )
-                      ))
-             
-             
+                      ),
+                      
+                      
+                      absolutePanel(id = "tabla", fixed = TRUE, draggable = FALSE, top = 50, left = 390, right = 0, bottom = 0,
+                                    style = "overflow-y: scroll;",
+                                    tags$i(textOutput("tabla_text"), style = "color: red"),                        # display error message displayed if there is no data available
+                                    DT::dataTableOutput("table", width = "100%", height = "100%")
+                                    
+                      )
+             )
              )
 )
 
@@ -692,31 +691,27 @@ server <- function(input, output, session) {
   
   ## Dataexplorer 
   
-  table_datasetInput1 <- reactive({
-    full %>% filter(
-      Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
-    ) %>%
-      select(Fecha, Departamento, input$table_show_vars) %>% 
-      group_by(Fecha, Departamento) %>% 
-      summarise_all(median, na.rm = TRUE) # Si se quiere ver la mediana o promedio realizar el cambio de la funcion
-  })
-  
-  
-  table_datasetInput2 <- reactive({
-    full %>% filter(
-      #is.null(input$table_municipio) | Municipio %in% input$table_municipio,  # Tener cuidado, que es lo que se quiere filtrar
-      Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
-    ) %>%
-      select("Fecha", "Departamento", "Municipio", input$table_show_vars_municipio)
-  })
-  
-  
   table_datasetInput <- reactive({
-    if (input$table_aggregation == "Departamento") {table_datasetInput1()} else {table_datasetInput2()}
+    if (input$table_aggregation == "Departamento") {
+      full %>% filter(
+        Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
+      ) %>%
+        select(Fecha, Departamento, input$table_show_vars) %>% 
+        group_by(Fecha, Departamento) %>% 
+        summarise_all(median, na.rm = TRUE) # Si se quiere ver la mediana o promedio realizar el cambio de la funcion
+    } else {
+      full %>% filter(
+        #is.null(input$table_municipio) | Municipio %in% input$table_municipio,  # Tener cuidado, que es lo que se quiere filtrar
+        Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
+      ) %>%
+        select("Fecha", "Departamento", "Municipio", input$table_show_vars_municipio)
+    }
   })
+  
+  # Por si se quiere agragar algun error
+  output$tabla_text <- renderText({""})
   
   output$table <- renderDT({
-    
     DT::datatable(
       table_datasetInput(),
       extensions = c('ColReorder'),
@@ -734,14 +729,6 @@ server <- function(input, output, session) {
       ) %>%
       formatStyle(names(table_datasetInput()), "white-space"="nowrap")
   })
-  
-  observe({
-    input$table_reset
-    #updatePickerInput(session, "table_show_vars", selected = plot_location_list$Departamento)
-    #updatePickerInput(session, "table_show_vars_municipio", selected = c("Fecha", "Departamento", "Municipio"),)
-    #updatePickerInput(session, "table_show_vars_municipio", selected = names(data),)
-    #updateSliderTextInput(session, "table_data", selected = c(dates_min, dates_max))
-  }) 
   
 }
 

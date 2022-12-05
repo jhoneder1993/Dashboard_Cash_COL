@@ -264,105 +264,61 @@ ui <- bootstrapPage(
              
              #### 1ra página ################################################
              
-             tabPanel("Dashboard",
-                      icon = icon("tachometer-alt"),
-                      div(class="dashboard",                                                            # set dashboard class from CSS file
+             # Nuevo tab Panel del Explorador de Datos #########################
+             tabPanel("Data Explorer", 
+                      icon = icon("table"),
+                      tags$head(includeCSS("styles.css")), 
+                      
+                        absolutePanel(                                                                # define introduction box
+                          id = "control_table", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
+                          top = "50", left = "10", right = "auto", bottom = "auto", width = "370", height = "300",
                           
-                          tags$head(includeCSS("styles.css")),                                          # load CSS stylesheet
+                          radioGroupButtons("table_aggregation",                                                                   # pickerInput lista y radioGroupButtons opciones a lo largo
+                                            label = "Nivel de agregación: ",
+                                            choices = c("Departamento", "Municipio"),
+                                            selected = "Departamento",
+                                            justified = TRUE
+                          ),
                           
-                          leafletOutput("map", width = "100%", height = "100%"),                        # Cargar el mapa
+                          #Cuando se selecciona Departamento
+                          conditionalPanel(condition = "input.table_aggregation == 'Departamento'",
+                                           pickerInput("table_show_vars",
+                                                       label = "Productos:",
+                                                       choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                       selected = c("Alimentos", "No alimentos"),
+                                                       multiple = TRUE
+                                           )
+                          ),
                           
-                          absolutePanel(                                                                # define introduction box
-                            id = "home", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
-                            top = "10", left = "10", right = "auto", bottom = "auto", width = "370", height = "600",
-                            style = "overflow-y: scroll;",
-                            
-                            h5("Contexto"),
-                            
-                            p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
-                              de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
-                              para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
-                              para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
-                              de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
-                              style="text-align:justify;margin-bottom:20px"),
-                            
-                            p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
-                              lanzó la Iniciativa Conjunta de Monitoreo del Mercado de Colombia (JMMI- COL) desde marzo del 2020, entrevistando tanto a
-                              consumidores como comerciantes para entender la situación actual del mercado, su capacidad de satisfacer las necesidades mínimas
-                              y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            hr(),
-                            
-                            h5("Metodología"),
-                            
-                            p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
-                              comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
-                              De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
-                              registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            hr(),
-                            
-                            h5("Limitaciones"),
-                            
-                            p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
-                              ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
-                              generalizables a las poblaciones de interés.", style="text-align:justify;margin-bottom:20px"),
-                            ),
+                          #Cuando se selecciona municipio
+                          conditionalPanel(condition = "input.table_aggregation == 'Municipio'",
+                                           pickerInput("table_show_vars_municipio",
+                                                       label = "Productos:",
+                                                       choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                       options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                                       selected = c("Alimentos", "No alimentos"),
+                                                       multiple = TRUE
+                                           )
+                          ),
                           
-                          ##########################
-                          absolutePanel(
-                            id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "380", right = "auto", bottom = "auto",
-                            width = 330, height = "auto",
-                            
-                            
-                            pickerInput("map_indicator_select",
-                                        label = "Agrupar por:",
-                                        choices = c("Item", "Departamento"),
-                                        selected = "Item",
-                                        multiple = FALSE
-                            ),
-                            hr(),
-                            
+                          #Meses/Rondas
+                          sliderTextInput("table_data",
+                                          "Rondas:",
+                                          force_edges = TRUE,
+                                          choices = dates,
+                                          selected = c(dates_min, dates_max))
+                          
+                        ),
+                        
+                        
+                        absolutePanel(id = "tabla", fixed = TRUE, draggable = FALSE, top = 50, left = 390, right = 0, bottom = 0,
+                                      style = "overflow-y: scroll;",
+                                      tags$i(textOutput("tabla_text"), style = "color: red"),                        # display error message displayed if there is no data available
+                                      DT::dataTableOutput("table", width = "100%", height = "100%")
 
-                            conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
-                                             pickerInput("select_bydepartamento_departamento",
-                                                         label = "Departamento(s):",
-                                                         choices = unique(map_location_list$Departamento),
-                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                         selected = c("Bogota, D.C."),
-                                                         multiple = TRUE
-                                             )
-                            ),
-                            
-                            conditionalPanel(condition = "input.map_indicator_select == 'Item'",
-                                             pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
-                                                         label = "Grupo de productos:",
-                                                         choices = lapply(split(item_list$Item, item_list$Group), as.list),
-                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                         selected = full_list$Item[1],
-                                                         multiple = FALSE
-                                             )
-                            ),
-                            
-                            hr(),
-                            
-                            sliderTextInput("map_date_select",
-                                            "Month:",
-                                            force_edges = TRUE,
-                                            choices = dates,
-                                            selected = dates_max,
-                                            animate = TRUE
-                            )                                                                              # close sliderTextInput
-                            
-                          ),                                                                                 # close absolutePanel
-                          
-                          absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 00, bottom = 0,
-                                        width = "550", height = "20",
-                                        tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
-                          )
-                          ))
+                        )
+                      )
              )
   )
 
@@ -373,86 +329,50 @@ ui <- bootstrapPage(
 server <- function(input, output, session){
   
   
-  output$map_text <- renderText({""})
+  ## Dataexplorer 
   
-  output$map <- renderLeaflet({
-    
-    #prices_map <- prices_long %>% filter(Fecha == dates_max)
-    
-    if (input$map_indicator_select == "Item") {
-      prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
-        summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
+  table_datasetInput <- reactive({
+    if (input$table_aggregation == "Departamento") {
+      full %>% filter(
+        Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
+      ) %>%
+        select(Fecha, Departamento, input$table_show_vars) %>% 
+        group_by(Fecha, Departamento) %>% 
+        summarise_all(median, na.rm = TRUE) # Si se quiere ver la mediana o promedio realizar el cambio de la funcion
     } else {
-      prices_map <- prices_long %>% select(-Municipio, -Item) %>% filter(Fecha == input$map_date_select, Departamento %in% input$select_bydepartamento_departamento) %>% 
-        group_by(Fecha, Departamento) %>% summarise_all(median, na.rm = TRUE) 
-      
+      full %>% filter(
+        #is.null(input$table_municipio) | Municipio %in% input$table_municipio,  # Tener cuidado, que es lo que se quiere filtrar
+        Fecha >= input$table_data[1] & Fecha <= input$table_data[2]
+      ) %>%
+        select("Fecha", "Departamento", "Municipio", input$table_show_vars_municipio)
     }
-    
-    #prices_map <- prices_long %>% select(-Municipio, -Item) %>% filter(Fecha == "2020-11-01", Departamento == "Antioquia") %>% 
-    #  group_by(Fecha, Departamento) %>% summarise_all(median, na.rm = TRUE) 
-    
-    
-    #prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
-    #  summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
-    
-    departamento <- left_join(departamento, prices_map, by = c("admin1Name" = "Departamento"))
-    
-    output$map_text <- renderText({
-      if (all(is.na(departamento[["Price"]])) == TRUE) {
-        "There is no data for this selection. Select another month or indicator."} else {NULL}
-    })
-    
-    if (all(is.na(departamento[["Price"]])) == TRUE) {
-      return(NULL)
-    } 
-    
-    labels <- sprintf("<strong>%s</strong><br/>%s COP (%s)", departamento$admin1Name, format(departamento$'Price', big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                        domain = departamento$'Price', na.color = "transparent"
-    )
-    
-    # Coordenadas
-    bounds <- departamento %>% 
-      st_bbox() %>% 
-      as.character()
-    
-    map <- leaflet(options = leafletOptions(attributionControl=FALSE, )) %>%
-      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>% 
-      addMapPane(name = "base", zIndex = 410) %>% 
-      addMapPane(name = "polygons", zIndex = 420) %>% 
-      addMapPane(name = "label", zIndex = 430) %>%
-      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$'Price'),
-                  stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
-                  highlight = highlightOptions(
-                    weight = 5,
-                    color = "#666666",
-                    fillOpacity = 0.75,
-                    bringToFront = TRUE
-                  ),
-                  label = labels,
-                  labelOptions = labelOptions(
-                    style = list("font-weight" = "normal", padding = "3px 8px"),
-                    textsize = "15px",
-                    direction = "auto"),
-                  options = leafletOptions(pane = "polygons")
-      ) %>% 
-      addPolygons(data = country, group = "País", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
-      addLegend("bottomright", pal = pal, values = departamento$'Price',
-                title = "Precio:",
-                labFormat = labelFormat(prefix = "COP "),
-                opacity = 1
-      )%>%
-      setMapWidgetStyle(style = list(background = "transparent")) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
-                       options = c(providerTileOptions(opacity = 0.6),
-                                   leafletOptions(pane = "base"))) %>%
-      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
-                       options = c(providerTileOptions(opacity = 1),
-                                   leafletOptions(pane = "label"))) %>%
-      addLayersControl(overlayGroups = c("Labels", "País", "Departamento", "Base map"))
-    
-    
   })
+  
+  # Por si se quiere agragar algun error
+  output$tabla_text <- renderText({""})
+  
+  output$table <- renderDT({
+    DT::datatable(
+      table_datasetInput(),
+      extensions = c('ColReorder'),
+      options = list(autoWidth = TRUE, dom = 't', paging = FALSE, colReorder= TRUE, fixedHeader = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns = 3)),
+      rownames = FALSE,
+      style = 'bootstrap', class = 'table-condensed table-hover table-striped'
+    ) %>%
+      formatRound(
+        # Empezar a hacer el formatRound a partir de la 3ra o 4ta columna
+        if (input$table_aggregation == "Departamento") {3:ncol(table_datasetInput())} else {4:ncol(table_datasetInput())},
+        digits = 0,
+        interval = 3,
+        mark = ",",
+        dec.mark = getOption("OutDec")
+      ) %>%
+      formatStyle(names(table_datasetInput()), "white-space"="nowrap")
+  })
+  
+  
+  
+
   
 }
 
