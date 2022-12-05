@@ -475,15 +475,16 @@ server <- function(input, output, session){
   
   output$plot_text <- renderText({
     if (nrow(plot_datasetInput()) == 0) {
-      "There is no data for this selection. Change the time frame or select another indicator/location."} else {"vamos bien perrito"}
+      "There is no data for this selection. Change the time frame or select another indicator/location."}
   })
   
   output$graph <- renderHighchart({
     
-    if ((input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") | (input$plot_aggregation == "Municipio" & input$plot_by_municipio_item == "Item")) {
+    if ((input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") | 
+        (input$plot_aggregation == "Municipio" & input$plot_by_municipio_item == "Item")) {
       graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(Fecha)), y = Price, group = Item))
       
-    } else if (input$plot_aggregation == "Departamento"){
+    } else if ((input$plot_aggregation == "Departamento") & input$plot_by_municipio_item == "Item") {
       graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(Fecha)), y = Price, group = Departamento))
       
     } else {
