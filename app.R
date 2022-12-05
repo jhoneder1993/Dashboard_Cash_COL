@@ -391,7 +391,7 @@ ui <- bootstrapPage(
                           ),
                           
                           conditionalPanel(condition = "input.plot_aggregation == 'Departamento' & input.plot_by_departamento_item == 'Departamento'",
-                                           pickerInput("select_bydepartamento_departamento",
+                                           pickerInput("select_bydepartamento_departamento2",
                                                        label = "Departamento(s):",
                                                        choices = unique(plot_location_list$Departamento),
                                                        options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
@@ -400,17 +400,7 @@ ui <- bootstrapPage(
                                            )
                           ),
                           
-                          # Cuando se selecciona Municipio
                           conditionalPanel(condition = "input.plot_aggregation == 'Municipio'",
-                                           radioGroupButtons("plot_by_municipio_item",
-                                                             label = "Agrupar por:",
-                                                             choices = c("Item", "Municipio"),
-                                                             selected = "Item",
-                                                             justified = TRUE
-                                           )
-                          ),
-                          
-                          conditionalPanel(condition = "input.plot_aggregation == 'Municipio' & input.plot_by_municipio_item == 'Municipio'",
                                            pickerInput("select_bymunicipio_municipio",
                                                        label = "Municipio(s):",
                                                        choices = lapply(split(plot_location_list$Municipio, plot_location_list$Departamento), as.list),
@@ -421,7 +411,7 @@ ui <- bootstrapPage(
                           ),
                           
                           conditionalPanel(condition = "input.plot_aggregation == 'Departamento' | input.plot_aggregation == 'Municipio'",
-                                           pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
+                                           pickerInput("select_item2",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
                                                        label = "Grupo de productos: ",
                                                        choices = lapply(split(full_list$Item, full_list$Group), as.list),
                                                        options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
@@ -627,53 +617,44 @@ server <- function(input, output, session) {
   })
   
   #########   2da ventana ######################################################
-  # Funciones para imprimir la informacion
-  # imprimir departamento si se tiene solo Item
-  plot_departamento_select <- reactive({
-    if (input$plot_by_departamento_item == "Item") {input$select_byitem_departamento} else {input$select_bydepartamento_departamento}
-  })
-  # imprimir municipio si se tiene solo Item
-  plot_municipio_select <- reactive({
-    if (input$plot_by_municipio_item == "Item") {input$select_byitem_municipio} else {input$select_bymunicipio_municipio}
-  })
-  # imprimir municipio o departamento cuando se escogio algun Item
-  plot_item_select <- reactive({
-    if ((input$plot_aggregation == 'Municipio' & input$plot_by_municipio_item == 'Item') | (input$plot_aggregation == 'Departamento' & input$plot_by_departamento_item == 'Item')) {input$select_item}
-  })
-  
-  # La informacion que se va a mostrar
-  plot_datasetInput <- reactive({prices_long %>%
-      filter(
-        is.null(plot_item_select()) | Item %in% plot_item_select()
-      ) %>%
-      execute_if(input$plot_by_municipio_item == 'Item' | input$plot_by_departamento_item == 'Item',
-                 filter(
-                   lubridate::dmy(Fecha) >= input$select_date[1] & lubridate::dmy(Fecha) <= input$select_date[2]
-                 )) %>% 
-      execute_if(input$plot_aggregation == 'Departamento',    filter(is.null(plot_departamento_select()) | Departamento %in% plot_departamento_select())) %>% 
-      execute_if(input$plot_aggregation == 'Municipio', select(-Departamento)) %>%
-      execute_if(input$plot_aggregation == 'Municipio', group_by(lubridate::dmy(Fecha),Municipio)) %>%
-      execute_if(input$plot_aggregation == 'Municipio', summarise_all(median, na.rm = TRUE)) %>%
-      execute_if(input$plot_aggregation == 'Municipio', filter(is.null(plot_municipio_select()) | Municipio %in% plot_municipio_select())) %>%
-      filter(!is.na(Price))
 
+  # La informacion que se va a mostrar
+  plot_datasetInput <- reactive({
+    
+    if (input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") {
+      prices_long %>% filter(Fecha >= input$select_date[1] & Fecha <= input$select_date[2]) %>% 
+        select(-Departamento, -Municipio) %>% group_by(Fecha, Item) %>% 
+        summarise_all(median, na.rm = TRUE) %>% 
+        filter(Item %in% input$select_item2)
+    } else if (input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Departamento") {
+      prices_long %>% filter(Fecha >= input$select_date[1] & Fecha <= input$select_date[2], Item %in% input$select_item2) %>% 
+        select(-Item, -Municipio) %>% group_by(Fecha, Departamento) %>%
+        summarise_all(median, na.rm = TRUE) %>% 
+        filter(Departamento %in% input$select_bydepartamento_departamento2)
+    } else if (input$plot_aggregation == "Municipio") {
+      prices_long %>% filter(Fecha >= input$select_date[1] & Fecha <= input$select_date[2], Item %in% input$select_item2) %>% 
+        select(-Item) %>% group_by(Fecha, Departamento, Municipio) %>%
+        summarise_all(median, na.rm = TRUE) %>% 
+        filter(Municipio %in% input$select_bymunicipio_municipio)
+    }
   })
   
   output$plot_text <- renderText({
     if (nrow(plot_datasetInput()) == 0) {
-      "There is no data for this selection. Change the time frame or select another indicator/location."} else {"vamos bien perrito"}
+      "There is no data for this selection. Change the time frame or select another indicator/location."}
   })
   
   output$graph <- renderHighchart({
     
-    if ((input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") | (input$plot_aggregation == "Municipio" & input$plot_by_municipio_item == "Item")) {
-      graph <- hchart(plot_datasetInput(), "point", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Item))
+    if (input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Item") {
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = sort(Fecha), y = Price, group = Item))
       
-    } else if (input$plot_aggregation == "Departamento"){
-      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Departamento))
-      
-    } else {
-      graph <- hchart(plot_datasetInput(), "line", hcaes(x = as.character(sort(lubridate::dmy(Fecha))), y = Price, group = Municipio))
+    } else if (input$plot_aggregation == "Departamento" & input$plot_by_departamento_item == "Departamento"){
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = sort(Fecha), y = Price, group = Departamento))
+    } else if (input$plot_aggregation == "Municipio"){
+      graph <- hchart(plot_datasetInput(), "line", hcaes(x = sort(Fecha), y = Price, group = Municipio))
+    } else{
+      "Sigue intentando"
     }
     graph <- graph %>%
       hc_xAxis(title = "") %>%
