@@ -215,14 +215,16 @@ plot_location_list <- prices_long %>%                                           
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
   filter(!duplicated(Departamento))  # remove duplicates
 
+indicator_list <- names(indicators2)             # extract additional indicator list
+
 map_location_list <- prices_long %>%                                           # define location list (which is later used as choice filter options)
   ungroup() %>%
   select(Departamento, Municipio, Fecha) %>%                                             # extract governorate and district columns
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
   filter(!duplicated(Departamento))  # remove duplicates
 
-indicator_list <- names(indicators) %>%
-  str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
+#indicator_list <- names(indicators) %>%
+#  str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
 
 cols      <- c("rgb(238,88,89)",   "rgb(88,88,90)",    "rgb(165,201,161)",        # define color palette for plot lines
                "rgb(86,179,205)",  "rgb(246,158,97)",  "rgb(255,246,122)",        # están los colores reach + una paleta de amarillos y naranjas
