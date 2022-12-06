@@ -473,61 +473,6 @@ ui <- bootstrapPage(
              
              ## 3RA VENTANA MAPA ###############################################
              
-             tabPanel("Mapa",
-                      icon = icon("map"),
-                      div(class="outer",
-                          
-                          tags$head(includeCSS("styles.css")),
-                          
-                          leafletOutput("mapa", width = "100%", height = "100%"),
-                          
-                          absolutePanel(
-                            id = "control_mapa", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "130", left = "12", right = "auto", bottom = "auto",
-                            width = 330, height = "auto",
-                            
-                            pickerInput(inputId =  "mapa_indicadores",
-                                        label = "Indicadores:",
-                                        choices = c("Existencias", "Desafíos de reabastecimiento"),
-                                        selected = "Existencias",
-                                        multiple = FALSE
-                            ),
-                            conditionalPanel(condition = "input.mapa_indicadores == 'Existencias'",
-                                             pickerInput(inputId = "map_item_select",
-                                                         label = HTML("Existencias:<br><i>(días de existencia de productos alimentarios)</i>"),
-                                                         choices = sort(list_existencia$Group),
-                                                         selected = "Dias de existencia Aceite",
-                                                         options = list(`actions-box` = TRUE),
-                                                         multiple = FALSE
-                                             )
-                                             
-                            ),
-                            conditionalPanel(condition = "input.mapa_indicadores == 'Desafíos de reabastecimiento'",
-                                             pickerInput(inputId =  "map_addindicator_select",
-                                                         label = HTML("Desafíos de reabastecimiento:<br><i>(% de comerciantes que reportaron)</i>"),
-                                                         choices = sort(indicator_list),
-                                                         selected = "% de comerciantes que reportaron enfrentar desafíos en los últimos 30 días",
-                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                         multiple = FALSE
-                                             )
-                            ),
-                            hr(),
-                            
-                            sliderTextInput(inputId = "mapa_fecha_seleccionada",
-                                            label = "Meses:",
-                                            force_edges = TRUE,
-                                            choices = dates_stock,
-                                            selected = dates_max_s,
-                                            animate = TRUE)                                                                              # close sliderTextInput
-                            
-                          ),   
-                          absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
-                                        width = "550", height = "20",
-                                        tags$i(h4(textOutput("mapa_texto"), style = "color: red; background-color: white;"))
-                                        
-                          )
-                          
-                          
-                      )),
              
              # Nuevo tab Panel del Explorador de Datos #########################
              tabPanel("Data Price Explorer", 
@@ -728,74 +673,7 @@ server <- function(input, output, session) {
   
   ## 3ra VENTANA MAPA ##########################################################
 
-  # Se hace para que se almacene la variable de manera más facil y tomarla mas adelante
-  mapa_indicadores <- reactive({
-    if (input$mapa_indicadores == "Existencias") {input$map_item_select} else {input$map_addindicator_select}
-  })
-  output$map_text <- renderText({""})
   
-  output$mapa <- renderLeaflet({
-    
-    
-    if (input$mapa_indicadores == "Existencias"){  
-      stock_mapa <- stock %>% filter(Fecha == input$mapa_fecha_seleccionada)
-      departamento <- left_join(departamento, stock_mapa, by =c("admin1Name" = "Departamento"))
-      
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-      pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                          domain = departamento[[mapa_indicadores()]], na.color = "transparent"
-      )
-    } else {
-      stock_mapa <- indicators2 %>% filter(Fecha == input$mapa_fecha_seleccionada)
-      departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-      pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                          domain = departamento[[mapa_indicadores()]], na.color = "transparent"
-      )
-      #names(indicators2)
-    }
-    
-    # Coordenadas
-    bounds <- departamento %>% 
-      st_bbox() %>% 
-      as.character()
-    
-    mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
-      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
-      addMapPane(name = "base", zIndex = 410) %>%
-      addMapPane(name = "polygons", zIndex = 420) %>%
-      addMapPane(name = "label", zIndex = 430) %>%
-      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
-                  stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
-                  highlight = highlightOptions(
-                    weight = 5,
-                    color = "#666666",
-                    fillOpacity = 0.75,
-                    bringToFront = TRUE
-                  ),
-                  label = labels,
-                  labelOptions = labelOptions(
-                    style = list("font-weight" = "normal", padding = "3px 8px"),
-                    textsize = "15px",
-                    direction = "auto"),
-                  options = leafletOptions(pane = "polygons")
-      )%>%
-      addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
-      addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
-                title = "Stock:",
-                labFormat = labelFormat(prefix = "Días:"),
-                opacity = 1
-      )%>%
-      setMapWidgetStyle(style = list(background = "transparent")) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
-                       options = c(providerTileOptions(opacity = 0.6),
-                                   leafletOptions(pane = "base"))) %>%
-      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
-                       options = c(providerTileOptions(opacity = 1),
-                                   leafletOptions(pane = "label"))) %>%
-      addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
-    
-  })
   
   ## 4ta ventana Dataexplorer ################################################## 
   
