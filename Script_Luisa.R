@@ -162,9 +162,11 @@ full <- left_join(prices, indicators2, by = c("Fecha", "Departamento", "Municipi
 
 
 #### * 3.3 Stock ###############################################################
-list_existencia <- read.csv("data/list_existencia.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";") 
 stock <- data %>%
-  select(mes, departamento, municipio, starts_with("dias_exisnc"))
+  select(mes, departamento, municipio, starts_with("dias_exisnc"),
+         -ends_with("_papel_higienico"), -ends_with("_toallas_higienicas"), -ends_with("_jabon_ropa"),
+         -ends_with("_jabon_personal"), -ends_with("_panales"), -ends_with("_cloro"),
+         -ends_with("_tabapocas"), -ends_with("crema_dental"))
 
 stock <- stock %>% 
   group_by(mes, departamento, municipio) %>% 
@@ -172,7 +174,7 @@ stock <- stock %>%
   select(mes, departamento, municipio, starts_with("dias_exisnc")) %>%          # calculate departamento medians
   group_by(mes, departamento, municipio) %>% 
   summarise_all(median, na.rm = TRUE) %>%
-  setNames(gsub("dias_exisnc_","",names(.))) %>%                                 # rename columns names
+  setNames(gsub("dias_exisnc_","",names(.))) %>%                                # rename columns names
   ungroup() %>%
   group_by(mes) %>%  
   rename(Fecha = mes, Departamento = departamento, Municipio = municipio,       # rename column names 
@@ -198,14 +200,17 @@ full2 <- left_join(stock, indicators2, by = c("Fecha", "Departamento", "Municipi
 
 #### 4 REFERENCES ##############################################################
 
-max(unique(lubridate::dmy(prices_long$Fecha)))
+max(unique(prices_long$Fecha))
 
-dates_stock <- sort(unique(lubridate::dmy(stock$Fecha)))
-
-dates <- sort(unique(lubridate::dmy(prices_long$Fecha)))                                          # define list with date range in data
-dates_min  <- min(lubridate::dmy(prices_long$Fecha))                              # set minimum date to be displayed
-dates_max  <- max(lubridate::dmy(prices_long$Fecha))                              # maximum date in data
-dates_max2 <- sort(unique(lubridate::dmy(prices_long$Fecha)), decreasing=T)[2]    # second-latest date
+dates_full <- sort(unique(full2$Fecha))
+dates_max_f <- max(full2$Fecha)
+dates_stock <- sort(unique(stock$Fecha))
+dates_max_s <- max(stock$Fecha)
+dates <- sort(unique(prices_long$Fecha))                                          # define list with date range in data
+dates_min  <- min(prices_long$Fecha)                              # set minimum date to be displayed
+dates_min_s <- min(stock$Fecha)
+dates_max  <- max(prices_long$Fecha)                              # maximum date in data
+dates_max2 <- sort(unique(prices_long$Fecha), decreasing=T)[2]    # second-latest date
 
 dates_max_1y <- as.POSIXlt(dates_max)                                             # most recent month minus 1 year
 dates_max_1y$year <- dates_max_1y$year-1
@@ -218,8 +223,7 @@ plot_location_list <- prices_long %>%                                           
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
   filter(!duplicated(Departamento))                                               # remove duplicates
 
-indicator_list <- names(indicators2) %>%
-  str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
+indicator_list <- names(indicators2)             # extract additional indicator list
 
 cols      <- c("rgb(238,88,89)",   "rgb(88,88,90)",    "rgb(165,201,161)",        # define color palette for plot lines
                "rgb(86,179,205)",  "rgb(246,158,97)",  "rgb(255,246,122)",        # están los colores reach + una paleta de amarillos y naranjas
@@ -239,13 +243,14 @@ prices_country <- prices %>%                                                    
   summarise_all(median, na.rm = TRUE)
 prices_country_long <- gather(prices_country, Item, Price, 2:ncol(prices_country))# transform country-level price data to long format
 
+
 prices_country_home <- prices_country %>%                                         # filter out SMEB data from country level price data
-  filter(lubridate::dmy(Fecha) >= dates_min) %>%
+  filter (Fecha >= dates_min )%>%
   select(Fecha, `Lista de productos alimentarios`, `Lista de productos no alimentarios`, 
          `Lista de productos compilados`) %>%
   gather(Item, Price, 'Lista de productos alimentarios':'Lista de productos compilados')                                    # transform SMEB data to long format so highcharter can read dataframe
 
-one_year_from_current_date <- lubridate::dmy(prices_country_home$Fecha) %>% max() - 366
+one_year_from_current_date <- prices_country_home$Fecha %>% max() - 366
 
 prices_country_home <- prices_country_home %>% filter(Fecha > one_year_from_current_date)
 
@@ -277,9 +282,9 @@ ui <- bootstrapPage(
                             ),
                             conditionalPanel(condition = "input.mapa_indicadores == 'Existencias'",
                                              pickerInput(inputId = "map_item_select",
-                                                         label = HTML("Existencias:<br><i>(días de existencia)</i>"),
-                                                         choices = sort(list_existencia$Item),
-                                                         selected = "`Días de existencia: Arroz`",
+                                                         label = HTML("Existencias:<br><i>(días de existencia de productos alimentarios)</i>"),
+                                                         choices = sort(list_existencia$Group),
+                                                         selected = "Dias de existencia Aceite",
                                                          options = list(`actions-box` = TRUE),
                                                          multiple = FALSE
                                              )
@@ -294,11 +299,13 @@ ui <- bootstrapPage(
                                                          multiple = FALSE
                                              )
                             ),
-                            sliderTextInput(inputId =  "mapa_fecha_seleccionada",
-                                            "Meses:",
+                            hr(),
+                            
+                            sliderTextInput(inputId = "mapa_fecha_seleccionada",
+                                            label = "Meses:",
                                             force_edges = TRUE,
-                                            choices = dates,
-                                            selected = dates_max,
+                                            choices = dates_stock,
+                                            selected = dates_max_s,
                                             animate = TRUE)                                                                              # close sliderTextInput
                             
                           ),   
@@ -308,12 +315,12 @@ ui <- bootstrapPage(
                                         
                           )
                           
-                      )
+                
              )
   )
 )
 
-
+)
 
 
 
@@ -326,26 +333,39 @@ server <- function(input, output, session) {
   #### 3 Mapa ######################################################################
   mapa_indicadores <- reactive({
     if (input$mapa_indicadores == "Existencias") {input$map_item_select} else {input$map_addindicator_select}
-    
   })
-  
   output$map_text <- renderText({""})
   
   output$map <- renderLeaflet({
+    if (input$mapa_indicadores == "Existencias"){  
+      stock_mapa <- stock %>% filter(Fecha == input$mapa_fecha_seleccionada)
+      departamento <- left_join(departamento, stock_mapa, by =c("admin1Name" = "Departamento"))
+      
+      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento$`Días de existencia: Aceite`, big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+      pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                          domain = departamento$`Días de existencia: Aceite`, na.color = "transparent"
+      )
+    } else {
+      stock_mapa <- indicators2 %>% filter(Fecha == input$mapa_fecha_seleccionada)
+      departamento <- left_join(departamento, indicators2, by = c("admin1Name" = "Departamento"))
+      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento$`% de comerciantes que reportaron enfrentar desafíos en los últimos 30 días`, big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+      pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                          domain = departamento$`% de comerciantes que reportaron enfrentar desafíos en los últimos 30 días`, na.color = "transparent"
+      )
+      
+    }
     
-    stock_mapa <- stock %>% filter(dates_stock == "2022-08-01")
-    departamento <- left_join(departamento, stock_mapa, by =c("admin1Name" = "Departamento"))
-    
-    labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$Admin1Name, format(departamento$'`Días de existencia: Arroz`', big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                        domain = departamento$'`Días de existencia: Arroz`', na.color = "transparent"
-    )
+    # Coordenadas
+    bounds <- departamento %>% 
+      st_bbox() %>% 
+      as.character()
     
     map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
+      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
       addMapPane(name = "base", zIndex = 410) %>%
       addMapPane(name = "polygons", zIndex = 420) %>%
       addMapPane(name = "label", zIndex = 430) %>%
-      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$'`Días de existencia: Arroz`'),
+      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$`Días de existencia: Aceite`),
                   stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
                   highlight = highlightOptions(
                     weight = 5,
@@ -361,11 +381,11 @@ server <- function(input, output, session) {
                   options = leafletOptions(pane = "polygons")
       )%>%
       addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
-      addLegend("bottomright", pal = pal, values = departamento$'`Días de existencia: Arroz`',
+      addLegend("bottomright", pal = pal, values = departamento$`Días de existencia: Aceite`,
                 title = "Stock:",
-                labFormat = labelFormat(prefix = "Indicador"),
+                labFormat = labelFormat(prefix = "Días:"),
                 opacity = 1
-      ) %>%
+      )%>%
       setMapWidgetStyle(style = list(background = "transparent")) %>%
       addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
                        options = c(providerTileOptions(opacity = 0.6),
@@ -374,31 +394,32 @@ server <- function(input, output, session) {
                        options = c(providerTileOptions(opacity = 1),
                                    leafletOptions(pane = "label"))) %>%
       addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
+    
   })
   
   observe({
     
-    stock_mapa <- stock %>% filter(lubridate::dmy(Fecha) <= "2022-08-01")
-    departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
-    indicators_map <- indicators2 %>% filter(lubridate::dmy(Fecha) <= "2022-08-01")
-    departamento <- left_join(departamento, indicators2, by = c("admin1Name" = "Departamento"))
     
-    output$mapa_texto <- renderText({
-      if (all(is.na(departamento[[mapa_indicadores()]])) == TRUE) {
-        "No hay datos para esta selección. Por favor seleccions otro mes o indicador."} else {NULL}
+    output$map_text <- renderText({
+      if (all(is.na(departamento[["Departamento"]])) == TRUE) {
+        "There is no data for this selection. Select another month or indicator."} else {NULL}
     })
-    if (all(is.na(departamento[[mapa_indicadores()]])) == TRUE) {
+    
+    if (all(is.na(departamento[["Departamento"]])) == TRUE) {
       return(NULL)
-    }
+    } 
+    
     if (input$mapa_indicadores == "Existencias") {
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha.x, "%b %Y")) %>% lapply(htmltools::HTML)
+      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
     } else {
-      labels <- sprintf("<strong>%s</strong><br/>%s&#37; de comerciantes que reportaron (%s)", departamento$admin1name, departamento[[mapa_indicadores()]], format(departamento$Fecha.x, "%b %Y")) %>% lapply(htmltools::HTML)
+      labels <- sprintf("<strong>%s</strong><br/>%s&#37; de comerciantes que reportaron (%s)", departamento$admin1name, departamento[[mapa_indicadores()]], format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
     }
+    
     pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
                         domain = departamento[[mapa_indicadores()]], na.color = "transparent")
     pal2 <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                         domain = range(0,100), na.color = "transparent")
+                         domain = departamento[[mapa_indicadores()]], na.color = "transparent")
+    
     
     leafletProxy("map") %>%
       clearControls %>%
@@ -436,28 +457,28 @@ server <- function(input, output, session) {
                                direction = "auto",
                                options = leafletOptions(pane = "polygons")
                              )
-                 )%>%
-                   execute_if(input$mapa_indicadores == "Existencias",
-                              addLegend("bottomright", pal = pal, values = departamento [[mapa_indicadores()]],
-                                        title = "Existencias:",
-                                        labFormat = labelFormat(prefix = "Stock"),
-                                        opacity = 1)
-                   )%>%
-                   execute_if(input$mapa_indicadores == "Desafíos de reabastecimiento",
-                              addLegend("bottomright", pal = pal2, values = range(0,100),
-                                        title = "% de comerciantes que reportaron:",
-                                        labFormat = labelFormat(suffix = "%"),
-                                        opacity = 1
-                              )
-                   )
+                 )
+      )%>%
+      execute_if(input$mapa_indicadores == "Existencias",
+                 addLegend("bottomright", pal = pal, values = departamento [[mapa_indicadores()]],
+                           title = "Existencias:",
+                           labFormat = labelFormat(prefix = "Stock"),
+                           opacity = 1)
+      )%>%
+      execute_if(input$mapa_indicadores == "Desafíos de reabastecimiento",
+                 addLegend("bottomright", pal = pal2, values = range(0,100),
+                           title = "% de comerciantes que reportaron:",
+                           labFormat = labelFormat(suffix = "%"),
+                           opacity = 1
+                 )
       )
+    
+    
+    
+    
   })
-  
-  
-  
+
 }
-
-
 
 # Run the application 
 shinyApp(ui = ui, server = server)
