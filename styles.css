@@ -45,6 +45,13 @@ div.outer {
   padding: 20px 20px 20px 20px;
 }
 
+#control_mapa {
+  background-color: white;
+  cursor: move;
+  opacity: 0.9;
+  padding: 20px 20px 20px 20px;
+}
+
 #control_table {
   background-color: white;
   cursor: move;
