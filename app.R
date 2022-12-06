@@ -432,8 +432,6 @@ ui <- bootstrapPage(
                           
                           hr(),
                           
-                          h6("Algo de carreta si se quiere o se puede eliminar esto"),
-                          
                           absolutePanel(id = "dropdown", bottom = 20, left = 20, width = 200,                            # define blue info button
                                         fixed=TRUE, draggable = FALSE, height = "auto",
                                         dropdown(
@@ -472,7 +470,7 @@ ui <- bootstrapPage(
                         ))),
              
              # Nuevo tab Panel del Explorador de Datos #########################
-             tabPanel("Data Explorer", 
+             tabPanel("Data Price Explorer", 
                       icon = icon("table"),
                       tags$head(includeCSS("styles.css")), 
                       
