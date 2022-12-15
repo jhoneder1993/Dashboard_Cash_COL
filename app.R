@@ -279,12 +279,12 @@ ui <- bootstrapPage(
                             h5("Contexto"),
                             
                             p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
-                              de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
+                              de personas en todo el mundo. En la actualidad, se estima que más de 2.4 millones de migrantes han llegado a Colombia
                               para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:20px"),
                             
-                            p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
+                            p("Con el fin de abordar estas necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
                               para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
-                              de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
+                              de las cadenas de suministro y mercados que funcionen adecuadamente, así como las proporciones existentes de productos básicos de forma continua.", 
                               style="text-align:justify;margin-bottom:20px"),
                             
                             p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
@@ -298,7 +298,7 @@ ui <- bootstrapPage(
                             
                             p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
                               comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
-                              De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
+                              De forma general, en cada ronda se intentó, dentro de cada municipio, recolectar por lo menos tres precios por cada artículo evaluado,
                               registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:20px"),
                             
                             hr(),
