@@ -360,8 +360,54 @@ ui <- bootstrapPage(
                           absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 00, bottom = 0,
                                         width = "550", height = "20",
                                         tags$i(h4(textOutput("map_text"), style = "color: red; background-color: white;"))
-                          )
+                          ),
+                          
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left = 20, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href='https://app.powerbi.com/view?r=eyJrIjoiYmFkOGFhNWQtNDI5YS00MTI1LWExNzQtMDlmYzEwOWNlMWEwIiwidCI6IjJhMjEyMjQxLTg5OWMtNDc1Mi1iZDMzLTUxZWFjM2M1ODJkNSIsImMiOjh9', target = "_blank",
+                                               tags$img(src='GTM.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left = 100, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href='https://www.reach-initiative.org/where-we-work/colombia/', target = "_blank",
+                                               tags$img(src='REACH.jpg', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =240, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href='https://www.goalglobal.org/countries/colombia/', target = "_blank",
+                                               tags$img(src='GOAL.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =320, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href='https://pro.drc.ngo/where-we-work/americas/colombia/', target = "_blank",
+                                               tags$img(src='images.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =400, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href='https://www.accioncontraelhambre.org/es/latinoamerica/colombia', target = "_blank",
+                                               tags$img(src='ACH.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =455, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href='https://www.usaid.gov/es/colombia/our-work#:~:text=USAID%20contribuye%20a%20los%20esfuerzos,sindicatos%20y%20promover%20la%20transparencia.', target = "_blank",
+                                               tags$img(src='USAID.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =530, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://nrc.org.co/",
+                                               tags$img(src='NRC.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =610, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://savethechildren.org.co/",
+                                               tags$img(src='STC.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =715, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://help.unhcr.org/colombia/donde-encontrar-ayuda/oficinas-del-acnur/",
+                                               tags$img(src='UNHCR.jpg', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =753, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://es.wfp.org/",
+                                               tags$img(src='WFP.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =830, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://www.worldvision.co/",
+                                               tags$img(src='WV.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =930, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://www.eda.admin.ch/deza/es/home/paises/colombia.html",
+                                               tags$img(src='SDC.JPG', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =995, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://mercycorps.org.co/",
+                                               tags$img(src='MERCY.png', height='30'))),
+                          absolutePanel(id = "logo", class = "card", bottom = 15, left =1095, fixed=TRUE, draggable = FALSE, height = "auto",
+                                        tags$a(href="https://colombia.iom.int/es",
+                                               tags$img(src='OIM.png', height='30'))),
+                          
                       )),
+             
+
              
              
              #### 2da página  Grafica de Precios################################
@@ -462,9 +508,11 @@ ui <- bootstrapPage(
                                         )
                           ),
                           
+                          
                           width = 3                                                                    # Cambiar el ancho del recuadro
                           
                         ),
+                        
                         
                         mainPanel(                                                                      # Cuando va sidebarLayout debe ir mainPanel
                           br(),
