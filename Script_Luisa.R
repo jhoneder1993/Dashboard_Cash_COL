@@ -158,6 +158,22 @@ indicators2 <- indicators %>%
          '% de comerciantes que reportaron desafíos por: Mala relación con el proveedor' = desafios_17
   )
 
+## Pasar datos a numericos
+# Verificar columnas a cambiar
+#names(indicators2[4:ncol(indicators2)])
+#
+## Cambiar a tipo numerico
+#for (i in names(indicators2[4:ncol(indicators2)])) {
+#  indicators2[[i]] <- as.numeric(indicators2[[i]] )
+#}
+#
+#for (i in names(indicators2[4:ncol(indicators2)])) {
+#  indicators2 <- indicators2 %>% mutate(!!sym(i) := case_when(!!sym(i) == "NaN" ~ NA_real_,
+#                                                              TRUE ~ !!sym(i)))
+#}
+
+
+
 full <- left_join(prices, indicators2, by = c("Fecha", "Departamento", "Municipio"))
 
 
@@ -268,10 +284,10 @@ ui <- bootstrapPage(
                           
                           tags$head(includeCSS("styles.css")),
                           
-                          leafletOutput("map", width = "100%", height = "100%"),
+                          leafletOutput("mapa", width = "100%", height = "100%"),
                           
                           absolutePanel(
-                            id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "130", left = "12", right = "auto", bottom = "auto",
+                            id = "control_mapa", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "130", left = "12", right = "auto", bottom = "auto",
                             width = 330, height = "auto",
                             
                             pickerInput(inputId =  "mapa_indicadores",
@@ -331,28 +347,31 @@ server <- function(input, output, session) {
   
   
   #### 3 Mapa ######################################################################
+  # Se hace para que se almacene la variable de manera más facil y tomarla mas adelante
   mapa_indicadores <- reactive({
     if (input$mapa_indicadores == "Existencias") {input$map_item_select} else {input$map_addindicator_select}
   })
   output$map_text <- renderText({""})
   
-  output$map <- renderLeaflet({
+  output$mapa <- renderLeaflet({
+    
+    
     if (input$mapa_indicadores == "Existencias"){  
       stock_mapa <- stock %>% filter(Fecha == input$mapa_fecha_seleccionada)
       departamento <- left_join(departamento, stock_mapa, by =c("admin1Name" = "Departamento"))
       
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento$`Días de existencia: Aceite`, big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
       pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                          domain = departamento$`Días de existencia: Aceite`, na.color = "transparent"
+                          domain = departamento[[mapa_indicadores()]], na.color = "transparent"
       )
     } else {
       stock_mapa <- indicators2 %>% filter(Fecha == input$mapa_fecha_seleccionada)
-      departamento <- left_join(departamento, indicators2, by = c("admin1Name" = "Departamento"))
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento$`% de comerciantes que reportaron enfrentar desafíos en los últimos 30 días`, big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+      departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
+      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
       pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                          domain = departamento$`% de comerciantes que reportaron enfrentar desafíos en los últimos 30 días`, na.color = "transparent"
+                          domain = departamento[[mapa_indicadores()]], na.color = "transparent"
       )
-      
+      #names(indicators2)
     }
     
     # Coordenadas
@@ -360,12 +379,12 @@ server <- function(input, output, session) {
       st_bbox() %>% 
       as.character()
     
-    map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
+    mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
       fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
       addMapPane(name = "base", zIndex = 410) %>%
       addMapPane(name = "polygons", zIndex = 420) %>%
       addMapPane(name = "label", zIndex = 430) %>%
-      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$`Días de existencia: Aceite`),
+      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
                   stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
                   highlight = highlightOptions(
                     weight = 5,
@@ -381,7 +400,7 @@ server <- function(input, output, session) {
                   options = leafletOptions(pane = "polygons")
       )%>%
       addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
-      addLegend("bottomright", pal = pal, values = departamento$`Días de existencia: Aceite`,
+      addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
                 title = "Stock:",
                 labFormat = labelFormat(prefix = "Días:"),
                 opacity = 1
@@ -396,88 +415,6 @@ server <- function(input, output, session) {
       addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
     
   })
-  
-  observe({
-    
-    
-    output$map_text <- renderText({
-      if (all(is.na(departamento[["Departamento"]])) == TRUE) {
-        "There is no data for this selection. Select another month or indicator."} else {NULL}
-    })
-    
-    if (all(is.na(departamento[["Departamento"]])) == TRUE) {
-      return(NULL)
-    } 
-    
-    if (input$mapa_indicadores == "Existencias") {
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-    } else {
-      labels <- sprintf("<strong>%s</strong><br/>%s&#37; de comerciantes que reportaron (%s)", departamento$admin1name, departamento[[mapa_indicadores()]], format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-    }
-    
-    pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                        domain = departamento[[mapa_indicadores()]], na.color = "transparent")
-    pal2 <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                         domain = departamento[[mapa_indicadores()]], na.color = "transparent")
-    
-    
-    leafletProxy("map") %>%
-      clearControls %>%
-      clearGroup("Departamento") %>%
-      execute_if(input$mapa_indicadores == "Existencias",
-                 addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
-                             stroke = TRUE, color = "#58585A", weight = 0.4, opacity = 1,
-                             highlight = highlightOptions(
-                               weight = 5,
-                               color = "#666666",
-                               fillOpacity = o.75,
-                               bringToFront = TRUE
-                             ),
-                             label = labels,
-                             labelOptions = labelOptions(
-                               style = list("font-weight" = "normal", padding = "3px 8px"),
-                               textsize = "15px",
-                               direction = "auto"),
-                             options = leafletOptions(pane = "polygons")
-                 )
-      )%>%
-      execute_if(input$mapa_indicadores == "Desafíos de reabastecimiento",
-                 addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal2(departamento[[mapa_indicadores()]]),
-                             stroke = TRUE, color = "#58585A", weight = 0.4, opacity = 1,
-                             highlight = highlightOptions(
-                               weight = 5,
-                               color = "#666666",
-                               fillOpacity = 0.75,
-                               bringToFront = TRUE
-                             ),
-                             label = labels, 
-                             labelOptions = labelOptions(
-                               style = list("font-weight" = "normal", padding = "3px 8px"),
-                               textsize = "15px",
-                               direction = "auto",
-                               options = leafletOptions(pane = "polygons")
-                             )
-                 )
-      )%>%
-      execute_if(input$mapa_indicadores == "Existencias",
-                 addLegend("bottomright", pal = pal, values = departamento [[mapa_indicadores()]],
-                           title = "Existencias:",
-                           labFormat = labelFormat(prefix = "Stock"),
-                           opacity = 1)
-      )%>%
-      execute_if(input$mapa_indicadores == "Desafíos de reabastecimiento",
-                 addLegend("bottomright", pal = pal2, values = range(0,100),
-                           title = "% de comerciantes que reportaron:",
-                           labFormat = labelFormat(suffix = "%"),
-                           opacity = 1
-                 )
-      )
-    
-    
-    
-    
-  })
-
 }
 
 # Run the application 

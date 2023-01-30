@@ -27,6 +27,7 @@ library(scales)                                                                 
 source("source/execute_if.R", encoding = "UTF-8")
 source("source/execute_in_pipeline.R", encoding = "UTF-8")
 
+
 #### 2 LOAD DATA ###############################################################
 
 data <- read.csv("data/longterm_data.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";")   # load JPMI dataset
@@ -276,38 +277,71 @@ ui <- bootstrapPage(
                             top = "10", left = "10", right = "auto", bottom = "auto", width = "370", height = "600",
                             style = "overflow-y: scroll;",
                             
-                            h5("Contexto"),
+                            h5(strong('Acerca del Dashboard')),
                             
-                            p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
-                              de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
-                              para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
-                              para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
-                              de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
+                            p("El propósito de este dashboard es informar a la comunidad comunitaria, de forma práctica e interactiva, acerca de los indicadores 
+                              más relevantes de la Iniciativa Conjunta para el Monitoreo de Mercados de Colombia (JMMI), en su componente de comerciantes: precios
+                              de los productos monitoreados, días de existencia (stock) y desafíos de reabastecimiento reportados por los comerciantes. ",
                               style="text-align:justify;margin-bottom:20px"),
                             
-                            p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
+                            p("En la primera pestaña, “Dashboard”, encontrará los precios de cada uno de los productos monitoreados (alimentarios y no alimentarios),
+                              por departamentos, en un mapa coroplético. Además, en el botón inferior izquierdo (i), podrá revisar el contexto de la evaluación, la
+                              metodología usada, así como sus limitaciones; en la segunda pestaña, “Gráfica de Precios”, encontrará también los precios de los productos
+                              monitoreados por departamento en una gráfica de líneas; la tercera pestaña, “Mapa”, describe a través de un mapa coroplético las existencias
+                              (stock) de los productos monitoreados y los desafíos de reabastecimiento reportados por los y las comerciantes. Cada uno de estos datos es 
+                              }reportado a nivel departamental; finalmente, en la pestaña “ Data Price Explorer” encontrará en una base de datos, los precios de cada uno de
+                              los productos monitoreados a nivel departamental y municipal.", 
+                              style="text-align:justify;margin-bottom:20px"),
+                            
+                            p("Es importante resaltar que los datos presentados en este dashboard corresponden a todas las rondas monitoreadas desde el año 2020 hasta agosto
+                              de 2022 por el equipo de REACH, con el apoyo de los socios del Grupo de Transferencias Monetarias de Colombia (GTM).", style="text-align:justify;margin-bottom:20px"),
+                            
+                          ),
+                          absolutePanel(id = "dropdown", bottom = 20, left = 20, width = 200,                            # define blue info button
+                                        fixed=TRUE, draggable = FALSE, height = "auto",
+                                        dropdown(
+                                          h6(strong('Contexto')),
+                                          p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
+                              de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
+                              para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:5px"),
+                              
+                              p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
+                              para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
+                              de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
+                              style="text-align:justify;margin-bottom:5px"),
+                              
+                              p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
                               lanzó la Iniciativa Conjunta de Monitoreo del Mercado de Colombia (JMMI- COL) desde marzo del 2020, entrevistando tanto a
                               consumidores como comerciantes para entender la situación actual del mercado, su capacidad de satisfacer las necesidades mínimas
-                              y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            hr(),
-                            
-                            h5("Metodología"),
-                            
-                            p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
+                              y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:5px"),
+                              
+                              
+                              
+                              h6(strong('Metodología')),
+                              
+                              p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
                               comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
                               De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
-                              registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:20px"),
-                            
-                            hr(),
-                            
-                            h5("Limitaciones"),
-                            
-                            p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
+                              registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:5px"),
+                              
+                              
+                              
+                              h6(strong('Limitaciones')),
+                              
+                              p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
                               ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
-                              generalizables a las poblaciones de interés.", style="text-align:justify;margin-bottom:20px"),
+                              generalizables a las poblaciones de interés. Además, para cada una de las rondas monitoreadas, no se incluyeron aquellos artículos
+                              para los cuales no fue posible recolectar al menos cuatro precios.", style="text-align:justify;margin-bottom:5px"),
+                              width = "650px",
+                              tooltip = tooltipOptions(title = "Botón informativo"),
+                              size = "xs",
+                              up = TRUE,
+                              style = "jelly", icon = icon("info"),
+                              animate = animateOptions(
+                                enter = "fadeInLeftBig",
+                                exit  = "fadeOutLeft",
+                                duration = 0.5)
+                                        )
                           ),
                           
                           ##########################
@@ -439,19 +473,11 @@ ui <- bootstrapPage(
                           absolutePanel(id = "dropdown", bottom = 20, left = 20, width = 200,                            # define blue info button
                                         fixed=TRUE, draggable = FALSE, height = "auto",
                                         dropdown(
-                                          h4("Se requiere boton informativo"),
-                                          column(
-                                            HTML("Una tabla puede ir aqui???"),
-                                            width = 6),
-                                          column(p(h6("textooooooo")),
-                                                 p(h6("más texto")),
-                                                 p(h6("super textoooooo")),
-                                                 p(h6("More details on the SMEB can be found here:",
-                                                      tags$a(href="https://www.impact-repository.org/toolkit/file-storage-and-management/",
-                                                             "Prueba de link"), ".")),
-                                                 width = 5),
+                                          h4("Nota"),
+                                          column(p(h6("Por el tipo de muestreo, hay zonas geográficas que no tendrán cobertura de precios en algunas rondas")),
+                                                                                                  width = 5),
                                           width = "650px",
-                                          tooltip = tooltipOptions(title = "Queremos utilizar un boton informativo?"),
+                                          tooltip = tooltipOptions(title = "Botón informativo"),
                                           size = "xs",
                                           up = TRUE,
                                           style = "jelly", icon = icon("info"),
@@ -638,11 +664,11 @@ server <- function(input, output, session) {
       st_bbox() %>% 
       as.character()
     
-    map <- leaflet(options = leafletOptions(attributionControl=FALSE, )) %>%
-      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>% 
-      addMapPane(name = "base", zIndex = 410) %>% 
-      addMapPane(name = "polygons", zIndex = 420) %>% 
-      addMapPane(name = "label", zIndex = 430) %>%
+    map <- leaflet(options = leafletOptions(attributionControl=FALSE, )) |> 
+      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) |> 
+      addMapPane(name = "base", zIndex = 410) |>  
+      addMapPane(name = "polygons", zIndex = 420) |>  
+      addMapPane(name = "label", zIndex = 430) |> 
       addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$'Price'),
                   stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
                   highlight = highlightOptions(
@@ -657,13 +683,13 @@ server <- function(input, output, session) {
                     textsize = "15px",
                     direction = "auto"),
                   options = leafletOptions(pane = "polygons")
-      ) %>% 
-      addPolygons(data = country, group = "País", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+      ) |>  
+      addPolygons(data = country, group = "País", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) |> 
       addLegend("bottomright", pal = pal, values = departamento$'Price',
                 title = "Precio:",
                 labFormat = labelFormat(prefix = "COP "),
                 opacity = 1
-      )%>%
+      ) |> 
       setMapWidgetStyle(style = list(background = "transparent")) %>%
       addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
                        options = c(providerTileOptions(opacity = 0.6),
@@ -738,6 +764,11 @@ server <- function(input, output, session) {
   
   output$mapa <- renderLeaflet({
     
+    # Coordenadas
+    bounds <- departamento %>% 
+      st_bbox() %>% 
+      as.character()
+    
     
     if (input$mapa_indicadores == "Existencias"){  
       stock_mapa <- stock %>% filter(Fecha == input$mapa_fecha_seleccionada)
@@ -747,55 +778,92 @@ server <- function(input, output, session) {
       pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
                           domain = departamento[[mapa_indicadores()]], na.color = "transparent"
       )
+      
+      ### OJO
+      mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
+        fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
+        addMapPane(name = "base", zIndex = 410) %>%
+        addMapPane(name = "polygons", zIndex = 420) %>%
+        addMapPane(name = "label", zIndex = 430) %>%
+        addPolygons(data = departamento, group = "s", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
+                    stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
+                    highlight = highlightOptions(
+                      weight = 5,
+                      color = "#666666",
+                      fillOpacity = 0.75,
+                      bringToFront = TRUE
+                    ),
+                    label = labels,
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "15px",
+                      direction = "auto"),
+                    options = leafletOptions(pane = "polygons")
+        )%>%
+        addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+        addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
+                  title = "Stock:",
+                  labFormat = labelFormat(prefix = "Días:"),
+                  opacity = 1
+        )%>%
+        setMapWidgetStyle(style = list(background = "transparent")) %>%
+        addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
+                         options = c(providerTileOptions(opacity = 0.6),
+                                     leafletOptions(pane = "base"))) %>%
+        addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
+                         options = c(providerTileOptions(opacity = 1),
+                                     leafletOptions(pane = "label"))) %>%
+        addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
+      
     } else {
       stock_mapa <- indicators2 %>% filter(Fecha == input$mapa_fecha_seleccionada)
       departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
-      labels <- sprintf("<strong>%s</strong><br/>%s Stock (%s)", departamento$admin1Name, format(departamento[[mapa_indicadores()]], big.mark=","), format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+      
+      labels <- sprintf("<strong>%s</strong><br/>%s %s (%s)", departamento$admin1Name ,format(departamento[[mapa_indicadores()]], big.mark=","), '%', format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
       pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
                           domain = departamento[[mapa_indicadores()]], na.color = "transparent"
       )
-      #names(indicators2)
+      
+      ######
+      mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
+        fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
+        addMapPane(name = "base", zIndex = 410) %>%
+        addMapPane(name = "polygons", zIndex = 420) %>%
+        addMapPane(name = "label", zIndex = 430) %>%
+        addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
+                    stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
+                    highlight = highlightOptions(
+                      weight = 5,
+                      color = "#666666",
+                      fillOpacity = 0.75,
+                      bringToFront = TRUE
+                    ),
+                    label = labels,
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "15px",
+                      direction = "auto"),
+                    options = leafletOptions(pane = "polygons")
+        )%>%
+        addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+        addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
+                  title = "Reportado:",
+                  labFormat = labelFormat(prefix = "%:"),
+                  opacity = 1
+        )%>%
+        setMapWidgetStyle(style = list(background = "transparent")) %>%
+        addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
+                         options = c(providerTileOptions(opacity = 0.6),
+                                     leafletOptions(pane = "base"))) %>%
+        addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
+                         options = c(providerTileOptions(opacity = 1),
+                                     leafletOptions(pane = "label"))) %>%
+        addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
     }
     
-    # Coordenadas
-    bounds <- departamento %>% 
-      st_bbox() %>% 
-      as.character()
     
-    mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
-      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
-      addMapPane(name = "base", zIndex = 410) %>%
-      addMapPane(name = "polygons", zIndex = 420) %>%
-      addMapPane(name = "label", zIndex = 430) %>%
-      addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
-                  stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
-                  highlight = highlightOptions(
-                    weight = 5,
-                    color = "#666666",
-                    fillOpacity = 0.75,
-                    bringToFront = TRUE
-                  ),
-                  label = labels,
-                  labelOptions = labelOptions(
-                    style = list("font-weight" = "normal", padding = "3px 8px"),
-                    textsize = "15px",
-                    direction = "auto"),
-                  options = leafletOptions(pane = "polygons")
-      )%>%
-      addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
-      addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
-                title = "Stock:",
-                labFormat = labelFormat(prefix = "Días:"),
-                opacity = 1
-      )%>%
-      setMapWidgetStyle(style = list(background = "transparent")) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
-                       options = c(providerTileOptions(opacity = 0.6),
-                                   leafletOptions(pane = "base"))) %>%
-      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
-                       options = c(providerTileOptions(opacity = 1),
-                                   leafletOptions(pane = "label"))) %>%
-      addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
+    
+    
     
   })
   
