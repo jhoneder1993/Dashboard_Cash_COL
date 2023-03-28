@@ -27,13 +27,12 @@ library(scales)                                                                 
 source("source/execute_if.R", encoding = "UTF-8")
 source("source/execute_in_pipeline.R", encoding = "UTF-8")
 
-
 #### 2 LOAD DATA ###############################################################
 
 data <- read.csv("data/longterm_data.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";")   # load JPMI dataset
 list_existencia <- read.csv("data/list_existencia.csv", na.strings = c("NA", ""), encoding="latin1", sep = ";") 
 item_list   <- read.csv("data/item_list.csv", encoding="latin1")                                     # load item list
-
+item_list_1 <-  read.csv("data/item_list_1.csv", encoding="latin1")
 # Cargar shps
 departamento <- st_read("gis/Admin1_UnodcOcha_01012009.shp")
 country     <- st_read("gis/World_admin0_countries_py_WFP_nd.shp")              # load shapefile with country border
@@ -62,9 +61,6 @@ numerico <- c("precio_aceite", "precio_arroz", "precio_atun", "precio_cloro",
 for (i in numerico) {
   data[i] <- as.numeric(data[[i]])
 }
-
-
-
 
 #### 3 AGGREGATION #############################################################
 
@@ -127,8 +123,6 @@ indicators <- data %>%
          -ends_with("_frijoles"), -ends_with("_pasta"), -ends_with("_harina"), -ends_with("_platano"),
          -ends_with("_papa"), -ends_with("_yuca"), -ends_with("_aceite"), -ends_with("_tomate"),
          -ends_with("_leche"), -ends_with("_atun"))
-
-
 
 indicators2 <- indicators %>%
   gather(Indicator, Value, 4:(ncol(indicators))) %>%
@@ -196,8 +190,6 @@ stock <- stock %>%
 
 max(unique(prices_long$Fecha))
 
-
-
 dates <- sort(unique(prices_long$Fecha))                                          # define list with date range in data
 dates_min  <- min(prices_long$Fecha)                                              # set minimum date to be displayed
 dates_max  <- max(prices_long$Fecha)                                              # maximum date in data
@@ -224,9 +216,6 @@ map_location_list <- prices_long %>%                                           #
   arrange(Departamento, Municipio) %>%                                            # list alphabetically
   filter(!duplicated(Departamento))  # remove duplicates
 
-#indicator_list <- names(indicators) %>%
-#  str_subset(c("Fecha", "Departamento", "Municipio"), negate = TRUE)              # extract additional indicator list
-
 cols      <- c("rgb(238,88,89)",   "rgb(88,88,90)",    "rgb(165,201,161)",        # define color palette for plot lines
                "rgb(86,179,205)",  "rgb(246,158,97)",  "rgb(255,246,122)",        # están los colores reach + una paleta de amarillos y naranjas
                "rgb(210,203,184)", "rgb(247,172,172)", "rgb(172,172,173)",        # azul claro y distintos tonos de beige
@@ -236,25 +225,7 @@ cols      <- c("rgb(238,88,89)",   "rgb(88,88,90)",    "rgb(165,201,161)",      
 full_list <- data.frame(Item = indicator_list,                                    # create full indicator list
                         Group = "Indicadores") %>% arrange(Item)
 full_list <- rbind(item_list, full_list)     # combine prices and additional indicators
-
-#### * 5.1 Define dataframe ####################################################
-
-prices_country <- prices %>%                                                      # aggregate price data at country level
-  select(-Departamento, -Municipio) %>%
-  group_by(Fecha) %>% 
-  summarise_all(median, na.rm = TRUE)
-prices_country_long <- gather(prices_country, Item, Price, 2:ncol(prices_country))# transform country-level price data to long format
-
-prices_country_home <- prices_country %>%                                         # filter out SMEB data from country level price data
-  filter(Fecha >= dates_min) %>%
-  select(Fecha, `Lista de productos alimentarios`, `Lista de productos no alimentarios`, 
-         `Lista de productos compilados`) %>%
-  gather(Item, Price, 'Lista de productos alimentarios':'Lista de productos compilados')                                    # transform SMEB data to long format so highcharter can read dataframe
-
-one_year_from_current_date <- prices_country_home$Fecha %>% max() - 366
-
-prices_country_home <- prices_country_home %>% filter(Fecha > one_year_from_current_date)
-
+#full_listp <- rbind(item_list_1, full_list)
 
 #### 6 UI ######################################################################
 ui <- bootstrapPage(
@@ -274,12 +245,12 @@ ui <- bootstrapPage(
                           
                           absolutePanel(                                                                # define introduction box
                             id = "home", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
-                            top = "10", left = "10", right = "auto", bottom = "auto", width = "370", height = "600",
+                            top = "10", left = "45", right = "auto", bottom = "auto", width = "370", height = "600",
                             style = "overflow-y: scroll;",
                             
                             h5(strong('Acerca del Dashboard')),
                             
-                            p("El propósito de este dashboard es informar a la comunidad comunitaria, de forma práctica e interactiva, acerca de los indicadores 
+                            p("El propósito de este dashboard es informar a la comunidad humanitaria, de forma práctica e interactiva, acerca de los indicadores 
                               más relevantes de la Iniciativa Conjunta para el Monitoreo de Mercados de Colombia (JMMI), en su componente de comerciantes: precios
                               de los productos monitoreados, días de existencia (stock) y desafíos de reabastecimiento reportados por los comerciantes. ",
                               style="text-align:justify;margin-bottom:20px"),
@@ -289,7 +260,7 @@ ui <- bootstrapPage(
                               metodología usada, así como sus limitaciones; en la segunda pestaña, “Gráfica de Precios”, encontrará también los precios de los productos
                               monitoreados por departamento en una gráfica de líneas; la tercera pestaña, “Mapa”, describe a través de un mapa coroplético las existencias
                               (stock) de los productos monitoreados y los desafíos de reabastecimiento reportados por los y las comerciantes. Cada uno de estos datos es 
-                              }reportado a nivel departamental; finalmente, en la pestaña “ Data Price Explorer” encontrará en una base de datos, los precios de cada uno de
+                              reportado a nivel departamental; finalmente, en la pestaña “ Data Price Explorer” encontrará en una base de datos, los precios de cada uno de
                               los productos monitoreados a nivel departamental y municipal.", 
                               style="text-align:justify;margin-bottom:20px"),
                             
@@ -304,79 +275,57 @@ ui <- bootstrapPage(
                                           p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
                               de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
                               para satisfacer sus necesidades básicas y requieren asistencia humanitaria.", style="text-align:justify;margin-bottom:5px"),
-                              
-                              p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
+                                          
+                                          p("Con el fin de abordar las necesidades, grupos humanitarios están implementando intervenciones basadas en efectivo como medio
                               para ayudar a los hogares vulnerables. Sin embargo, las intervenciones basadas en dinero en efectivo requieren información precisa
                               de las cadenas de suministro y mercados que funcionen adecuadamente y que proporciones productos básicos de forma continua.", 
-                              style="text-align:justify;margin-bottom:5px"),
-                              
-                              p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
+                                            style="text-align:justify;margin-bottom:5px"),
+                                          
+                                          p("Para abordar las brechas de información, REACH en colaboración con el Grupo de Trabajo de Transferencias Monetarias (GTM)
                               lanzó la Iniciativa Conjunta de Monitoreo del Mercado de Colombia (JMMI- COL) desde marzo del 2020, entrevistando tanto a
                               consumidores como comerciantes para entender la situación actual del mercado, su capacidad de satisfacer las necesidades mínimas
                               y el acceso o barreras que enfrentaban los consumidores al mismo.", style="text-align:justify;margin-bottom:5px"),
-                              
-                              
-                              
-                              h6(strong('Metodología')),
-                              
-                              p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
+                                          
+                                          
+                                          
+                                          h6(strong('Metodología')),
+                                          
+                                          p("En colaboración con las organizaciones socias del GTM, bajo el componente de productos básicos, se entrevistaron a varios
                               comerciantes en sus comercios o telefónicamente en diferentes municipios del país a través de un cuestionario con enfoque cuantitativo.
                               De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
                               registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:5px"),
-                              
-                              
-                              
-                              h6(strong('Limitaciones')),
-                              
-                              p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
+                                          
+                                          
+                                          
+                                          h6(strong('Limitaciones')),
+                                          
+                                          p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
                               ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
                               generalizables a las poblaciones de interés. Además, para cada una de las rondas monitoreadas, no se incluyeron aquellos artículos
                               para los cuales no fue posible recolectar al menos cuatro precios.", style="text-align:justify;margin-bottom:5px"),
-                              width = "650px",
-                              tooltip = tooltipOptions(title = "Botón informativo"),
-                              size = "xs",
-                              up = TRUE,
-                              style = "jelly", icon = icon("info"),
-                              animate = animateOptions(
-                                enter = "fadeInLeftBig",
-                                exit  = "fadeOutLeft",
-                                duration = 0.5)
+                                          width = "650px",
+                                          tooltip = tooltipOptions(title = "Botón informativo"),
+                                          size = "xs",
+                                          up = TRUE,
+                                          style = "jelly", icon = icon("info"),
+                                          animate = animateOptions(
+                                            enter = "fadeInLeftBig",
+                                            exit  = "fadeOutLeft",
+                                            duration = 0.5)
                                         )
                           ),
                           
                           ##########################
                           absolutePanel(
-                            id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", left = "380", right = "auto", bottom = "auto",
-                            width = 330, height = "auto",
+                            id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE, top = "50", 
+                            left = "415", right = "auto", bottom = "auto", width = 330, height = "auto",
                             
-                            
-                            pickerInput("map_indicator_select",
-                                        label = "Agrupar por:",
-                                        choices = c("Item", "Departamento"),
-                                        selected = "Item",
+                            pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
+                                        label = "Grupo de productos:",
+                                        choices = lapply(split(item_list_1$Item, item_list_1$Group), as.list),
+                                        options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
+                                        selected = full_list$Item[1],
                                         multiple = FALSE
-                            ),
-                            hr(),
-                            
-                            
-                            conditionalPanel(condition = "input.map_indicator_select == 'Departamento'",
-                                             pickerInput("select_bydepartamento_departamento",
-                                                         label = "Departamento(s):",
-                                                         choices = unique(map_location_list$Departamento),
-                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                         selected = c("Bogota, D.C."),
-                                                         multiple = TRUE
-                                             )
-                            ),
-                            
-                            conditionalPanel(condition = "input.map_indicator_select == 'Item'",
-                                             pickerInput("select_item",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
-                                                         label = "Grupo de productos:",
-                                                         choices = lapply(split(item_list$Item, item_list$Group), as.list),
-                                                         options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                         selected = full_list$Item[1],
-                                                         multiple = FALSE
-                                             )
                             ),
                             
                             hr(),
@@ -451,7 +400,7 @@ ui <- bootstrapPage(
                           conditionalPanel(condition = "input.plot_aggregation == 'Departamento' | input.plot_aggregation == 'Municipio'",
                                            pickerInput("select_item2",                                                         # pickerInput lista y radioGroupButtons opciones a lo largo
                                                        label = "Grupo de productos: ",
-                                                       choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                       choices = lapply(split(item_list_1$Item, item_list_1$Group), as.list),
                                                        options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
                                                        selected = full_list$Item[1],
                                                        multiple = TRUE
@@ -475,7 +424,7 @@ ui <- bootstrapPage(
                                         dropdown(
                                           h4("Nota"),
                                           column(p(h6("Por el tipo de muestreo, hay zonas geográficas que no tendrán cobertura de precios en algunas rondas")),
-                                                                                                  width = 5),
+                                                 width = 5),
                                           width = "650px",
                                           tooltip = tooltipOptions(title = "Botón informativo"),
                                           size = "xs",
@@ -546,12 +495,10 @@ ui <- bootstrapPage(
                                             choices = dates_stock,
                                             selected = dates_max_s,
                                             animate = TRUE)                                                                              # close sliderTextInput
-                            
                           ),   
                           absolutePanel(id = "no_data", fixed = TRUE, draggable = FALSE, top = 50, left = 0, right = 0, bottom = 0,
                                         width = "550", height = "20",
                                         tags$i(h4(textOutput("mapa_texto"), style = "color: red; background-color: white;"))
-                                        
                           )
                           
                           
@@ -577,9 +524,9 @@ ui <- bootstrapPage(
                         conditionalPanel(condition = "input.table_aggregation == 'Departamento'",
                                          pickerInput("table_show_vars",
                                                      label = "Productos:",
-                                                     choices = lapply(split(full_list$Item, full_list$Group), as.list),
+                                                     choices = lapply(split(item_list_1$Item, item_list_1$Group), as.list),
                                                      options = list(title = "Select", `actions-box` = TRUE, `live-search` = TRUE),
-                                                     selected = c("Alimentos", "No alimentos"),
+                                                     selected = "Arroz (1 kg)",
                                                      multiple = TRUE
                                          )
                         ),
@@ -610,8 +557,57 @@ ui <- bootstrapPage(
                                     tags$i(textOutput("tabla_text"), style = "color: red"),                        # display error message displayed if there is no data available
                                     DT::dataTableOutput("table", width = "100%", height = "100%")
                                     
-                      )
-             )
+                      ),
+             
+          #Cargar los logos de las organizaciones
+          
+             absolutePanel(id = "logo", class = "card", bottom = 15, left = 20, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.r4v.info/es/node/388', target = "_blank",
+                                  tags$img(src='GTM.jpg', height='30'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 15, left = 130, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.reach-initiative.org', target = "_blank", tags$img(src='REACH.jpg', height='30'))),
+            
+                # display partner logos on bottom right
+             absolutePanel(id = "logo", class = "card", bottom = 14, right = 30, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.accioncontraelhambre.org/es', target = "_blank", tags$img(src='ACH.png', height='38'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 14, right = 90, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.cruzrojacolombiana.org', target = "_blank", tags$img(src='CRUZ.jpg', height='35'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 11, right = 200, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.goalglobal.org/countries/colombia/', target = "_blank", tags$img(src='GOAL.png', height='35'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 15, right = 290, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://pro.drc.ngo/where-we-work/americas/colombia/', target = "_blank", tags$img(src='images.png', height='35'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 15, right = 380, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://mercycorps.org.co', target = "_blank", tags$img(src='MERCY.png', height='34'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 14, right = 480, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://nrc.org.co', target = "_blank", tags$img(src='NRC.png', height='35'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 19, right = 570, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.iom.int/es', target = "_blank", tags$img(src='OIM.png', height='25'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 14, right = 640, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://savethechildren.org.co', target = "_blank", tags$img(src='STC.png', height='37'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 15, right = 770, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.acnur.org', target = "_blank", tags$img(src='UNHCR.jpg', height='38'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 11, right = 820, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://es.wfp.org', target = "_blank", tags$img(src='WFP.png', height='37'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 12, right = 920, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.worldvision.co', target = "_blank", tags$img(src='WV.png', height='36'))),
+             
+             absolutePanel(id = "logo", class = "card", bottom = 12, left = 265, fixed=TRUE, draggable = FALSE, height = "auto",
+                           tags$a(href='https://www.zoa-international.com/colombia', target = "_blank", tags$img(src='ZOA.png', height='37'))),
+             
+             
+
+  )
   )
 )
 
@@ -625,25 +621,36 @@ server <- function(input, output, session) {
   
   output$map <- renderLeaflet({
     
-    #prices_map <- prices_long %>% filter(Fecha == dates_max)
+    # Coordenadas
+    bounds <- departamento %>% 
+      st_bbox() %>% 
+      as.character()
     
-    if (input$map_indicator_select == "Item") {
-      prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
-        summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
-    } else {
-      prices_map <- prices_long %>% select(-Municipio, -Item) %>% filter(Fecha == input$map_date_select, Departamento %in% input$select_bydepartamento_departamento) %>% 
-        group_by(Fecha, Departamento) %>% summarise_all(median, na.rm = TRUE) 
-      
-    }
+    map <- leaflet(options = leafletOptions(attributionControl=FALSE, )) |> 
+      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) |> 
+      addMapPane(name = "base", zIndex = 410) |>  
+      addMapPane(name = "polygons", zIndex = 420) |>  
+      addMapPane(name = "label", zIndex = 430) |>  
+      addPolygons(data = country, group = "País", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) |> 
+      setMapWidgetStyle(style = list(background = "transparent")) %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
+                       options = c(providerTileOptions(opacity = 0.6),
+                                   leafletOptions(pane = "base"))) %>%
+      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
+                       options = c(providerTileOptions(opacity = 1),
+                                   leafletOptions(pane = "label"))) %>%
+      addLayersControl(overlayGroups = c("Labels", "País", "Departamento", "Base map"))
     
-    #prices_map <- prices_long %>% select(-Municipio, -Item) %>% filter(Fecha == "2020-11-01", Departamento == "Antioquia") %>% 
-    #  group_by(Fecha, Departamento) %>% summarise_all(median, na.rm = TRUE) 
     
+  })
+  
+  observe({
     
-    #prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
-    #  summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
+    prices_map <- prices_long %>% select(-Municipio) %>% group_by(Fecha, Departamento, Item) %>%
+      summarise_all(median, na.rm = TRUE) %>% filter(Fecha == input$map_date_select, Item == input$select_item)
     
     departamento <- left_join(departamento, prices_map, by = c("admin1Name" = "Departamento"))
+    
     
     output$map_text <- renderText({
       if (all(is.na(departamento[["Price"]])) == TRUE) {
@@ -659,16 +666,9 @@ server <- function(input, output, session) {
                         domain = departamento$'Price', na.color = "transparent"
     )
     
-    # Coordenadas
-    bounds <- departamento %>% 
-      st_bbox() %>% 
-      as.character()
-    
-    map <- leaflet(options = leafletOptions(attributionControl=FALSE, )) |> 
-      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) |> 
-      addMapPane(name = "base", zIndex = 410) |>  
-      addMapPane(name = "polygons", zIndex = 420) |>  
-      addMapPane(name = "label", zIndex = 430) |> 
+    leafletProxy("map") |> 
+      clearControls() |> 
+      clearGroup("polygons") |> 
       addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento$'Price'),
                   stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
                   highlight = highlightOptions(
@@ -683,24 +683,13 @@ server <- function(input, output, session) {
                     textsize = "15px",
                     direction = "auto"),
                   options = leafletOptions(pane = "polygons")
-      ) |>  
-      addPolygons(data = country, group = "País", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) |> 
+      ) |> 
       addLegend("bottomright", pal = pal, values = departamento$'Price',
                 title = "Precio:",
                 labFormat = labelFormat(prefix = "COP "),
-                opacity = 1
-      ) |> 
-      setMapWidgetStyle(style = list(background = "transparent")) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
-                       options = c(providerTileOptions(opacity = 0.6),
-                                   leafletOptions(pane = "base"))) %>%
-      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
-                       options = c(providerTileOptions(opacity = 1),
-                                   leafletOptions(pane = "label"))) %>%
-      addLayersControl(overlayGroups = c("Labels", "País", "Departamento", "Base map"))
-    
-    
+                opacity = 1)  
   })
+  
   
   #########   2da ventana ######################################################
   
@@ -755,20 +744,40 @@ server <- function(input, output, session) {
   })
   
   ## 3ra VENTANA MAPA ##########################################################
-
+  output$map_text <- renderText({""})
+  
   # Se hace para que se almacene la variable de manera más facil y tomarla mas adelante
   mapa_indicadores <- reactive({
     if (input$mapa_indicadores == "Existencias") {input$map_item_select} else {input$map_addindicator_select}
   })
-  output$map_text <- renderText({""})
+  
   
   output$mapa <- renderLeaflet({
-    
+
     # Coordenadas
     bounds <- departamento %>% 
       st_bbox() %>% 
       as.character()
     
+    mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
+      fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
+      addMapPane(name = "base", zIndex = 410) %>%
+      addMapPane(name = "polygons", zIndex = 420) %>%
+      addMapPane(name = "label", zIndex = 430) %>%
+      addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+      setMapWidgetStyle(style = list(background = "transparent")) %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
+                       options = c(providerTileOptions(opacity = 0.6),
+                                   leafletOptions(pane = "base"))) %>%
+      addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
+                       options = c(providerTileOptions(opacity = 1),
+                                   leafletOptions(pane = "label"))) %>%
+      addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
+    
+  })
+  
+  
+  observe({
     
     if (input$mapa_indicadores == "Existencias"){  
       stock_mapa <- stock %>% filter(Fecha == input$mapa_fecha_seleccionada)
@@ -778,58 +787,9 @@ server <- function(input, output, session) {
       pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
                           domain = departamento[[mapa_indicadores()]], na.color = "transparent"
       )
-      
-      ### OJO
-      mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
-        fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
-        addMapPane(name = "base", zIndex = 410) %>%
-        addMapPane(name = "polygons", zIndex = 420) %>%
-        addMapPane(name = "label", zIndex = 430) %>%
-        addPolygons(data = departamento, group = "s", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
-                    stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
-                    highlight = highlightOptions(
-                      weight = 5,
-                      color = "#666666",
-                      fillOpacity = 0.75,
-                      bringToFront = TRUE
-                    ),
-                    label = labels,
-                    labelOptions = labelOptions(
-                      style = list("font-weight" = "normal", padding = "3px 8px"),
-                      textsize = "15px",
-                      direction = "auto"),
-                    options = leafletOptions(pane = "polygons")
-        )%>%
-        addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
-        addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
-                  title = "Stock:",
-                  labFormat = labelFormat(prefix = "Días:"),
-                  opacity = 1
-        )%>%
-        setMapWidgetStyle(style = list(background = "transparent")) %>%
-        addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
-                         options = c(providerTileOptions(opacity = 0.6),
-                                     leafletOptions(pane = "base"))) %>%
-        addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
-                         options = c(providerTileOptions(opacity = 1),
-                                     leafletOptions(pane = "label"))) %>%
-        addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
-      
-    } else {
-      stock_mapa <- indicators2 %>% filter(Fecha == input$mapa_fecha_seleccionada)
-      departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
-      
-      labels <- sprintf("<strong>%s</strong><br/>%s %s (%s)", departamento$admin1Name ,format(departamento[[mapa_indicadores()]], big.mark=","), '%', format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
-      pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
-                          domain = departamento[[mapa_indicadores()]], na.color = "transparent"
-      )
-      
-      ######
-      mapa <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
-        fitBounds((as.numeric(bounds[1])-15), bounds[2], bounds[3], bounds[4]) %>%
-        addMapPane(name = "base", zIndex = 410) %>%
-        addMapPane(name = "polygons", zIndex = 420) %>%
-        addMapPane(name = "label", zIndex = 430) %>%
+      leafletProxy("mapa") |> 
+        clearControls() |> 
+        clearGroup("polygons") |> 
         addPolygons(data = departamento, group = "Departamento", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
                     stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
                     highlight = highlightOptions(
@@ -844,29 +804,48 @@ server <- function(input, output, session) {
                       textsize = "15px",
                       direction = "auto"),
                     options = leafletOptions(pane = "polygons")
-        )%>%
-        addPolygons(data = country, group = "Country", fill = FALSE, stroke = TRUE, color = "#58585A", weight = 1.2, opacity = 1) %>%
+        ) |> 
+        addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
+                  title = "Stock:",
+                  labFormat = labelFormat(prefix = "Días:"),
+                  opacity = 1
+        )
+    } else {
+      stock_mapa <- indicators2 %>% filter(Fecha == input$mapa_fecha_seleccionada)
+      departamento <- left_join(departamento, stock_mapa, by = c("admin1Name" = "Departamento"))
+      
+      labels <- sprintf("<strong>%s</strong><br/>%s %s (%s)", departamento$admin1Name ,format(departamento[[mapa_indicadores()]], big.mark=","), '%', format(departamento$Fecha, "%b %Y")) %>% lapply(htmltools::HTML)
+      pal <- colorNumeric(palette = c("#FFF98C", "#E0C45C", "#CB3B3B", "#85203B"),
+                          domain = departamento[[mapa_indicadores()]], na.color = "transparent"
+      )
+      
+      leafletProxy("mapa") |> 
+        clearControls() |> 
+        clearGroup("polygons") |> 
+        addPolygons(data = departamento, group = "s", fill = TRUE, fillOpacity = 0.7, fillColor = ~pal(departamento[[mapa_indicadores()]]),
+                    stroke = TRUE, color = "#58585A", weight = 0.3, opacity = 1,
+                    highlight = highlightOptions(
+                      weight = 5,
+                      color = "#666666",
+                      fillOpacity = 0.75,
+                      bringToFront = TRUE
+                    ),
+                    label = labels,
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "15px",
+                      direction = "auto"),
+                    options = leafletOptions(pane = "polygons")
+        )|> 
         addLegend("bottomright", pal = pal, values = departamento[[mapa_indicadores()]],
                   title = "Reportado:",
                   labFormat = labelFormat(prefix = "%:"),
                   opacity = 1
-        )%>%
-        setMapWidgetStyle(style = list(background = "transparent")) %>%
-        addProviderTiles(providers$CartoDB.PositronNoLabels, group = "Base map",
-                         options = c(providerTileOptions(opacity = 0.6),
-                                     leafletOptions(pane = "base"))) %>%
-        addProviderTiles(providers$CartoDB.PositronOnlyLabels, group = "Labels",
-                         options = c(providerTileOptions(opacity = 1),
-                                     leafletOptions(pane = "label"))) %>%
-        addLayersControl(overlayGroups = c("Labels", "Country", "Departamento", "Base map"))
+        )
     }
-    
-    
-    
-    
-    
   })
   
+ 
   ## 4ta ventana Dataexplorer ################################################## 
   
   ## Dataexplorer 
@@ -917,4 +896,3 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-             
