@@ -1,0 +1,14 @@
+name: REACH_JMMI_Comerciantes
+title: REACH_JMMI_Comerciantes
+username:
+account: impact-initiatives
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8169499
+bundleId: 6828256
+url: https://impact-initiatives.shinyapps.io/REACH_JMMI_Comerciantes/
+when: 1675959218.19898
+lastSyncTime: 1675959218.19899
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: -DESKTOP-P8VLUC7-2.Rhistory|-DESKTOP-P8VLUC7.Rhistory|-jhonmontero.Rhistory|.RData|app_col/app.R|Script_Cesar.R|Script_Luisa.R|Script_Montero.R
