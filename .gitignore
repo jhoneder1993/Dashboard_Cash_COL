@@ -6,6 +6,7 @@
 # Las carpetas
 /data
 /gis
+/archive
 
 #arhivos
 *.csv
