@@ -5,10 +5,10 @@ account: impact-initiatives
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8169499
-bundleId: 6828256
+bundleId: 7179163
 url: https://impact-initiatives.shinyapps.io/REACH_JMMI_Comerciantes/
-when: 1675959218.19898
-lastSyncTime: 1675959218.19899
+when: 1683301671.89828
+lastSyncTime: 1683301671.8983
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: -DESKTOP-P8VLUC7-2.Rhistory|-DESKTOP-P8VLUC7.Rhistory|-jhonmontero.Rhistory|.RData|app_col/app.R|Script_Cesar.R|Script_Luisa.R|Script_Montero.R
+ignoredFiles: .RData|archive

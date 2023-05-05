@@ -42,12 +42,12 @@ country     <- st_read("gis/World_admin0_countries_py_WFP_nd.shp")              
 data$mes <- lubridate::dmy(data$mes)
 
 ### Traer las tablas RDS #######################################################
-prices_long <- readRDS("prices_long.RData")
-full <- readRDS("full.RData")
-indicators2 <- readRDS("indicators2.RData")
-stock <- readRDS("stock.RData")
-indicator_list <- readRDS("indicator_list.RData")
-dias_stock <- readRDS("dias_stock.RData")
+prices_long <- readRDS("data/prices_long.RData")
+full <- readRDS("data/full.RData")
+indicators2 <- readRDS("data/indicators2.RData")
+stock <- readRDS("data/stock.RData")
+indicator_list <- readRDS("data/indicator_list.RData")
+dias_stock <- readRDS("data/dias_stock.RData")
 
 
 #### 3 REFERENCES ##############################################################
