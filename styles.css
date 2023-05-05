@@ -10,6 +10,30 @@ div.dashboard {
   min-height: 720px;
 }
 
+div.generaltabla {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  padding: 0;
+  min-width: 1210px;
+  min-height: 720px;
+}
+
+div.general {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  padding: 0;
+  min-width: 1210px;
+  min-height: 720px;
+}
+
 div.Mapa {
   position: absolute;
   top: 40px;
@@ -30,6 +54,12 @@ div.outer {
   bottom: 0;
   overflow: hidden;
   padding: 0;
+}
+
+#homegeneral {
+  background-color: rgba(255, 255, 255, 0.4);
+  padding: 20px 20px 0 20px;
+  
 }
 
 #home {
