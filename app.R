@@ -103,7 +103,7 @@ ui <- bootstrapPage(
                           absolutePanel(id = "homegeneral", class = "panel panel-default", fixed = FALSE, draggable = FALSE,
                                         left = 10, right = 10, top = 40, bottom = 10,
                                         
-                                        column(5,
+                                        column(4,
                                                h4('Acerca del Dashboard'),
                                                p("El propósito de este dashboard es informar a la comunidad humanitaria, de forma práctica e interactiva, acerca de los indicadores 
                               más relevantes de la Iniciativa Conjunta para el Monitoreo de Mercados de Colombia (JMMI), en su componente de comerciantes: precios
@@ -124,7 +124,7 @@ ui <- bootstrapPage(
                                                
                                         ),
                                         
-                                        column(7,
+                                        column(4,
                                                h4('Contexto'),
                                                p("Desde el 2015, Venezuela ha sufrido una grave crisis política y económica ocasionando el desplazamiento de millones 
                               de personas en todo el mundo. En la actualidad se estima que más de 2.4 millones de migrantes han llegado a Colombia
@@ -144,65 +144,37 @@ ui <- bootstrapPage(
                               De forma general, en cada ronda se intentó dentro de cada municipio recolectar por lo menos tres precios por cada artículo evaluado,
                               registrando el precio de la marca comercial más vendida en el negocio.", style="text-align:justify;margin-bottom:5px"),
                                                
+                                              
+                                               
+                                        ),
+                                        column(4,
                                                h4('Limitaciones'),
                                                p("Las conclusiones para el componente de mercados de productos básicos de esta evaluación, en todas sus rondas, son indicativas,
                               ya que la cantidad de datos reunidos no es una muestra representativa, por lo que los resultados no pueden extrapolarse y no son
                               generalizables a las poblaciones de interés. Además, para cada una de las rondas monitoreadas, no se incluyeron aquellos artículos
-                              para los cuales no fue posible recolectar al menos cuatro precios.", style="text-align:justify;margin-bottom:5px")
+                              para los cuales no fue posible recolectar al menos cuatro precios.", style="text-align:justify;margin-bottom:5px"),
                                                
-                                        )
+                                               h4('Socios participantes'),
+                                               tags$a(href="https://www.accioncontraelhambre.org/es", "Acción contra el Hambre", target = "_blank"),br(),
+                                               tags$a(href="https://www.acnur.org", "Alto Comisionado de las Naciones Unidas para Refugiados (ACNUR)", target = "_blank"),br(),
+                                               tags$a(href="https://apoyar.org", "APOYAR", target = "_blank"),br(),
+                                               tags$a(href="https://www.caritas.ch/en/", "Cáritas Suiza", target = "_blank"),br(),
+                                               tags$a(href="https://pro.drc.ngo/where-we-work/americas/colombia/", "Consejo Danés para Refugiados (DRC)", target = "_blank"),br(),
+                                               tags$a(href="https://nrc.org.co", "Consejo Noruego para Refugiados (NRC)", target = "_blank"), br(),
+                                               tags$a(href="https://www.rescue.org/country/colombia", "Comité Internacional de Rescate (IRC)", target = "_blank"), br(),
+                                               tags$a(href="https://www.cruzrojacolombiana.org", "Cruz Roja Colombiana", target = "_blank"), br(),
+                                               tags$a(href="https://www.goalglobal.org/countries/colombia/", "GOAL", target = "_blank"),br(),
+                                               tags$a(href="https://mercycorps.org.co", "Mercy Corps", target = "_blank"), br(),
+                                               tags$a(href="https://www.iom.int/es", "Organización Internacional para las Migraciones (OIM)", target = "_blank"), br(),
+                                               tags$a(href="https://savethechildren.org.co", "Save the Children", target = "_blank"), br(),
+                                               tags$a(href="https://es.wfp.org", "World Food Program (WFP)", target = "_blank"), br(),
+                                               tags$a(href="https://www.worldvision.co", "World Vision", target = "_blank"), br(),
+                                               tags$a(href="https://www.zoa-international.com/colombia", "ZOA", target = "_blank"), br()
+                                                                                             )
                                         
-                          ),
-                          
-                          #Cargar los logos de las organizaciones
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 15, left = 18, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.r4v.info/es/node/388', target = "_blank",
-                                               tags$img(src='GTM.jpg', height='30'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 15, left = 128, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.reach-initiative.org', target = "_blank", tags$img(src='REACH.jpg', height='30'))),
-                          
-                          # display partner logos on bottom right
-                          absolutePanel(id = "logo", class = "card", bottom = 14, right = 27, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.accioncontraelhambre.org/es', target = "_blank", tags$img(src='ACH.png', height='38'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 14, right = 87, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.cruzrojacolombiana.org', target = "_blank", tags$img(src='CRUZ.jpg', height='35'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 11, right = 197, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.goalglobal.org/countries/colombia/', target = "_blank", tags$img(src='GOAL.png', height='35'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 15, right = 287, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://pro.drc.ngo/where-we-work/americas/colombia/', target = "_blank", tags$img(src='images.png', height='35'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 15, right = 377, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://mercycorps.org.co', target = "_blank", tags$img(src='MERCY.png', height='34'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 13, right = 477, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://nrc.org.co', target = "_blank", tags$img(src='NRC.png', height='35'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 17, right = 567, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.iom.int/es', target = "_blank", tags$img(src='OIM.png', height='25'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 13, right = 637, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://savethechildren.org.co', target = "_blank", tags$img(src='STC.png', height='37'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 13, right = 758, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.acnur.org', target = "_blank", tags$img(src='UNHCR.jpg', height='38'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 11, right = 800, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://es.wfp.org', target = "_blank", tags$img(src='WFP.png', height='37'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 12, right = 894, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.worldvision.co', target = "_blank", tags$img(src='WV.png', height='36'))),
-                          
-                          absolutePanel(id = "logo", class = "card", bottom = 11, right = 1008, fixed=TRUE, draggable = FALSE, height = "auto",
-                                        tags$a(href='https://www.zoa-international.com/colombia', target = "_blank", tags$img(src='ZOA.png', height='37'))),
+                          ))),
                           
                           
-                      )
-             ),
              
              
              #### 2da página  DASHBOARD ########################################
